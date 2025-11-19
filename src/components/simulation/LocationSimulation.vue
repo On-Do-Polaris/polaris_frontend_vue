@@ -42,9 +42,32 @@ ChartJS.register(
   Filler
 );
 
+interface CandidateLocation {
+  name: string;
+  address: string;
+  coordinates: { lat: number; lng: number };
+  riskLevel: string;
+  riskScore: number;
+  risks: {
+    flood: number;
+    typhoon: number;
+    heatwave: number;
+    earthquake: number;
+    drought: number;
+    heavyRain: number;
+    coldWave: number;
+  };
+  aal: number;
+  cvar: number;
+  advantages: string[];
+  disadvantages: string[];
+  carbonImpact: number;
+  costChange: number;
+}
+
 interface Props {
   site: Site;
-  selectedCandidateData?: any;
+  selectedCandidateData?: CandidateLocation;
 }
 
 const props = defineProps<Props>();
@@ -238,7 +261,7 @@ const getRiskLevelColor = (level: string) => {
   return 'bg-green-500';
 };
 
-const selectCandidateLocation = (location: any) => {
+const selectCandidateLocation = (location: CandidateLocation) => {
   newAddress.value = location.address;
   simulationResult.value = location;
 };
