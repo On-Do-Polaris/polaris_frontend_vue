@@ -10,6 +10,7 @@ import {
   PointElement,
   CategoryScale,
   LinearScale,
+  type TooltipItem,
 } from 'chart.js';
 import { ChevronDown } from 'lucide-vue-next';
 
@@ -53,10 +54,18 @@ const riskFactors: RiskFactor[] = [
   '산불',
 ];
 
+interface PeriodData {
+  period: string;
+  SSP1: number;
+  SSP2: number;
+  SSP4: number;
+  SSP5: number;
+}
+
 const getDataByPeriod = (
   period: Period,
   riskFactor: RiskFactor
-): any[] => {
+): PeriodData[] => {
   if (period === '단기') {
     return [
       { period: '1분기', SSP1: 120, SSP2: 180, SSP4: 250, SSP5: 320 },
@@ -131,7 +140,7 @@ const chartOptions = {
     },
     tooltip: {
       callbacks: {
-        label: function(context: any) {
+        label: function(context: TooltipItem<'line'>) {
           let label = context.dataset.label || '';
           if (label) {
             label += ': ';
