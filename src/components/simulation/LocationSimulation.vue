@@ -66,7 +66,7 @@ interface CandidateLocation {
 }
 
 interface Props {
-  site: Site;
+  site?: Site;
   selectedCandidateData?: CandidateLocation;
 }
 
@@ -74,7 +74,7 @@ const props = defineProps<Props>();
 
 const newAddress = ref('');
 const isSimulating = ref(false);
-const simulationResult = computed(() => props.selectedCandidateData || null);
+const simulationResult = ref<CandidateLocation | null>(props.selectedCandidateData || null);
 
 // Mock locations with different risk profiles
 const candidateLocations = [
@@ -151,7 +151,7 @@ const handleSimulate = () => {
   // Simulate API call
   setTimeout(() => {
     // Find matching location or use random
-    const result = candidateLocations[Math.floor(Math.random() * candidateLocations.length)];
+    const result = candidateLocations[Math.floor(Math.random() * candidateLocations.length)] as CandidateLocation;
     simulationResult.value = result;
     isSimulating.value = false;
   }, 1500);
@@ -270,7 +270,7 @@ const selectCandidateLocation = (location: CandidateLocation) => {
 <template>
   <div class="space-y-6">
     <!-- Simulation Result -->
-    <template v-if="simulationResult">
+    <template v-if="simulationResult && site">
       <!-- Map Visualization -->
       <div class="border border-gray-200 bg-white p-6">
         <h4 class="text-gray-900 mb-4">위치 비교</h4>
