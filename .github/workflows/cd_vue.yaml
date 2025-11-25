@@ -7,6 +7,9 @@ on:
     types:
       - completed
     branches: [main]
+  pull_request:
+    types: [closed]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -17,7 +20,9 @@ jobs:
   deploy:
     name: 무중단 배포
     runs-on: ubuntu-22.04
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
 
     steps:
       - name: 배포 시작 알림
