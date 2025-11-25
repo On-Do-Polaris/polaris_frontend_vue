@@ -86,7 +86,7 @@ jobs:
             # Health check - 새 컨테이너가 준비될 때까지 대기 (내부 3000포트 체크)
             echo "4. Health check 중..."
             for i in {1..30}; do
-              if docker exec ${NEW_CONTAINER} wget --quiet --tries=1 --spider http://localhost:3000/ 2>/dev/null; then
+              if docker exec ${NEW_CONTAINER} wget --quiet --tries=1 --spider http://localhost:8080/ 2>/dev/null; then
                 echo "   ✓ 새 컨테이너 정상 동작 확인 (${i}초 경과)"
                 break
               fi
