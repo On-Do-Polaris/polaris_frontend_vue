@@ -7,7 +7,6 @@ import OnboardingModal from '@/components/common/OnboardingModal.vue'
 import { useAuthStore } from './store/auth'
 import { useUiStore } from './store/ui'
 
-//TODO:저장소 삭제 후 api 연결
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const router = useRouter()
