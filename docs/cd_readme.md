@@ -59,18 +59,18 @@ CI 완료 (이미지 푸시)
 
 ### 무중단 보장
 
-- ✅ **서비스 중단 없음**: 새 컨테이너가 준비된 후에만 전환
-- ✅ **자동 롤백**: Health Check 실패 시 자동으로 새 컨테이너 제거
-- ✅ **기존 서비스 유지**: 배포 실패 시 기존 컨테이너 계속 실행
+- **서비스 중단 없음**: 새 컨테이너가 준비된 후에만 전환
+- **자동 롤백**: Health Check 실패 시 자동으로 새 컨테이너 제거
+- **기존 서비스 유지**: 배포 실패 시 기존 컨테이너 계속 실행
 
 ## 주요 기능
 
 ### 1. 자동 트리거
 
-| 이벤트 | 동작 | 설명 |
-|-------|------|------|
-| CI 워크플로우 성공 | 자동 배포 | main 브랜치 이미지 푸시 완료 시 |
-| 수동 트리거 | 수동 배포 | GitHub Actions에서 `workflow_dispatch` |
+| 이벤트             | 동작      | 설명                                   |
+| ------------------ | --------- | -------------------------------------- |
+| CI 워크플로우 성공 | 자동 배포 | main 브랜치 이미지 푸시 완료 시        |
+| 수동 트리거        | 수동 배포 | GitHub Actions에서 `workflow_dispatch` |
 
 ### 2. SSH 원격 배포
 
@@ -90,16 +90,16 @@ CI 완료 (이미지 푸시)
 
 배포를 위해 다음 Secrets를 등록해야 합니다:
 
-| Secret 이름 | 설명 | 예시 |
-|------------|------|------|
-| `OCIR_REGISTRY` | OCIR 레지스트리 주소 | `ap-seoul-1.ocir.io` |
-| `OCIR_NAMESPACE` | Object Storage 네임스페이스 | `axabcdefghij` |
-| `OCIR_USERNAME` | `{namespace}/{username}` | `axabcdefghij/oracleidentitycloudservice/user@example.com` |
-| `OCIR_TOKEN` | Auth Token | `abcd1234EFGH5678ijkl` |
-| `SERVER_HOST` | 배포 서버 IP 또는 도메인 | `kk21.iptime.org` |
-| `SERVER_USER` | SSH 사용자명 | `kk21` |
-| `SERVER_SSH_KEY` | SSH 개인키 (전체 내용) | `-----BEGIN OPENSSH...` |
-| `SERVER_PORT` | SSH 포트 (선택, 기본 22) | `22` |
+| Secret 이름      | 설명                        | 예시                                                       |
+| ---------------- | --------------------------- | ---------------------------------------------------------- |
+| `OCIR_REGISTRY`  | OCIR 레지스트리 주소        | `ap-seoul-1.ocir.io`                                       |
+| `OCIR_NAMESPACE` | Object Storage 네임스페이스 | `axabcdefghij`                                             |
+| `OCIR_USERNAME`  | `{namespace}/{username}`    | `axabcdefghij/oracleidentitycloudservice/user@example.com` |
+| `OCIR_TOKEN`     | Auth Token                  | `abcd1234EFGH5678ijkl`                                     |
+| `SERVER_HOST`    | 배포 서버 IP 또는 도메인    | `kk21.iptime.org`                                          |
+| `SERVER_USER`    | SSH 사용자명                | `kk21`                                                     |
+| `SERVER_SSH_KEY` | SSH 개인키 (전체 내용)      | `-----BEGIN OPENSSH...`                                    |
+| `SERVER_PORT`    | SSH 포트 (선택, 기본 22)    | `22`                                                       |
 
 ### OCIR 설정
 
@@ -153,6 +153,7 @@ cat ~/.ssh/github_actions_cd
 ```
 
 GitHub에서:
+
 1. **Settings** → **Secrets and variables** → **Actions**
 2. **New repository secret**
 3. Name: `SERVER_SSH_KEY`
@@ -190,6 +191,7 @@ git push origin main
 ```
 
 **흐름:**
+
 1. CI 워크플로우가 이미지를 빌드하고 OCIR에 푸시
 2. CI 성공 시 자동으로 CD 워크플로우 트리거
 3. SSH로 서버 접속하여 무중단 배포
@@ -211,6 +213,7 @@ GitHub Actions에서 수동 트리거:
 3. **SSH로 서버 배포 (무중단)** step 확인
 
 **로그 예시:**
+
 ```
 =========================================
 무중단 배포 시작
@@ -291,6 +294,7 @@ git push origin main
 **증상:** `Permission denied` 또는 `Connection refused`
 
 **해결:**
+
 ```bash
 # SSH 키 권한 확인
 chmod 600 ~/.ssh/github_actions_cd
@@ -312,6 +316,7 @@ chmod 600 ~/.ssh/authorized_keys
 **증상:** 새 컨테이너가 Health Check를 통과하지 못함
 
 **해결:**
+
 ```bash
 # 서버에서 직접 확인
 docker ps -a | grep ondo-frontend
@@ -331,6 +336,7 @@ docker exec ondo-frontend-new cat /etc/nginx/conf.d/default.conf
 **증상:** 컨테이너는 실행되지만 접속 불가
 
 **해결:**
+
 ```bash
 # NPM 네트워크 존재 확인
 docker network ls | grep npm_network
@@ -351,6 +357,7 @@ docker network connect npm_network ondo-frontend
 **증상:** `unauthorized: authentication required`
 
 **해결:**
+
 ```bash
 # 서버에서 수동 로그인 테스트
 docker login ap-seoul-1.ocir.io
@@ -367,6 +374,7 @@ docker login ap-seoul-1.ocir.io
 **증상:** `no space left on device`
 
 **해결:**
+
 ```bash
 # 미사용 이미지 정리
 docker image prune -a
@@ -417,12 +425,12 @@ docker stats ondo-frontend
 
 ## 배포 전략 비교
 
-| 전략 | 장점 | 단점 | 현재 사용 |
-|-----|------|------|----------|
+| 전략           | 장점              | 단점            | 현재 사용  |
+| -------------- | ----------------- | --------------- | ---------- |
 | **Blue-Green** | 무중단, 빠른 롤백 | 리소스 2배 필요 | ✅ 사용 중 |
-| Rolling Update | 리소스 효율적 | 복잡한 설정 | ❌ |
-| Canary | 점진적 배포 | 복잡한 모니터링 | ❌ |
-| Recreate | 단순함 | 다운타임 발생 | ❌ |
+| Rolling Update | 리소스 효율적     | 복잡한 설정     | ❌         |
+| Canary         | 점진적 배포       | 복잡한 모니터링 | ❌         |
+| Recreate       | 단순함            | 다운타임 발생   | ❌         |
 
 ## Workflow 파일 위치
 
