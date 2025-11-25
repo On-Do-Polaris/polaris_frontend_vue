@@ -66,7 +66,7 @@ jobs:
             echo "3. 새 컨테이너 실행 중... (이름: ${NEW_CONTAINER})"
             docker run -d \
               --name ${NEW_CONTAINER} \
-              --network npm_network \
+              --network web \
               --restart unless-stopped \
               ${IMAGE}
 
