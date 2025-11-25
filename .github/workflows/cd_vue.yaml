@@ -81,14 +81,17 @@ jobs:
               ${IMAGE}
 
             # Health check - 새 컨테이너가 준비될 때까지 대기
-            echo "4. Health check 중..."
+            echo "5. Health check 중..."
             for i in {1..30}; do
-              if docker exec ${NEW_CONTAINER} wget --quiet --tries=1 --spider http://localhost/ 2>/dev/null; then
+              # curl 우선 시도, 없으면 wget, 둘 다 없으면 nc 사용
+              if docker exec ${NEW_CONTAINER} sh -c "curl -f -s http://localhost/ > /dev/null 2>&1 || wget --quiet --tries=1 --spider http://localhost/ 2>/dev/null || nc -z localhost 80" 2>/dev/null; then
                 echo "   ✓ 새 컨테이너 정상 동작 확인 (${i}초 경과)"
                 break
               fi
               if [ $i -eq 30 ]; then
                 echo "   ✗ Health check 실패 - 롤백 시작"
+                echo "   컨테이너 로그:"
+                docker logs ${NEW_CONTAINER} --tail 20
                 docker stop ${NEW_CONTAINER}
                 docker rm ${NEW_CONTAINER}
                 exit 1
@@ -98,7 +101,7 @@ jobs:
             done
 
             # 기존 컨테이너 확인 및 중지
-            echo "5. 기존 컨테이너 처리 중..."
+            echo "6. 기존 컨테이너 처리 중..."
             if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
               echo "   기존 컨테이너 중지 중..."
               docker stop ${CONTAINER_NAME} || true
@@ -109,11 +112,11 @@ jobs:
             fi
 
             # 새 컨테이너 이름 변경
-            echo "6. 새 컨테이너 활성화 중..."
+            echo "7. 새 컨테이너 활성화 중..."
             docker rename ${NEW_CONTAINER} ${CONTAINER_NAME}
 
             # 미사용 이미지 정리
-            echo "7. 미사용 이미지 정리 중..."
+            echo "8. 미사용 이미지 정리 중..."
             docker image prune -af
 
             echo "========================================="
