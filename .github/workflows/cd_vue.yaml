@@ -14,7 +14,7 @@ on:
 
 env:
   IMAGE_NAME: polaris-frontend
-  CONTAINER_NAME: ondo-frontend
+  CONTAINER_NAME: polaris-frontend
 
 jobs:
   deploy:

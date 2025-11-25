@@ -43,7 +43,7 @@ CI 완료 (이미지 푸시)
 
 이 프로젝트는 **Blue-Green 배포** 전략을 사용합니다:
 
-1. **새 컨테이너 실행** (`ondo-frontend-new`)
+1. **새 컨테이너 실행** (`polaris-frontend-new`)
    - 기존 서비스와 독립적으로 새 버전 실행
 
 2. **Health Check**
@@ -54,7 +54,7 @@ CI 완료 (이미지 푸시)
    - 새 컨테이너가 정상이면 기존 컨테이너 중지
 
 4. **컨테이너 전환**
-   - 새 컨테이너를 `ondo-frontend`로 이름 변경
+   - 새 컨테이너를 `polaris-frontend`로 이름 변경
    - Nginx Proxy Manager가 자동으로 새 컨테이너로 트래픽 전달
 
 ### 무중단 보장
@@ -220,7 +220,7 @@ GitHub Actions에서 수동 트리거:
 =========================================
 1. OCIR 로그인 중...
 2. 최신 이미지 다운로드 중...
-3. 새 컨테이너 실행 중... (이름: ondo-frontend-new)
+3. 새 컨테이너 실행 중... (이름: polaris-frontend-new)
 4. Health check 중...
    대기 중... (1/30)
    대기 중... (2/30)
@@ -261,13 +261,13 @@ Health Check 실패 시 자동으로 롤백됩니다:
 ssh user@server
 
 # 이전 이미지 확인
-docker images | grep ondo-frontend
+docker images | grep polaris-frontend
 
 # 이전 이미지로 컨테이너 재시작
-docker stop ondo-frontend
-docker rm ondo-frontend
+docker stop polaris-frontend
+docker rm polaris-frontend
 docker run -d \
-  --name ondo-frontend \
+  --name polaris-frontend \
   --network npm_network \
   --restart unless-stopped \
   ap-seoul-1.ocir.io/namespace/polaris-frontend:main-<이전SHA>
@@ -319,16 +319,16 @@ chmod 600 ~/.ssh/authorized_keys
 
 ```bash
 # 서버에서 직접 확인
-docker ps -a | grep ondo-frontend
+docker ps -a | grep polaris-frontend
 
 # 컨테이너 로그 확인
-docker logs ondo-frontend-new
+docker logs polaris-frontend-new
 
 # 수동 Health Check
-docker exec ondo-frontend-new wget --quiet --tries=1 --spider http://localhost/
+docker exec polaris-frontend-new wget --quiet --tries=1 --spider http://localhost/
 
 # nginx 설정 확인
-docker exec ondo-frontend-new cat /etc/nginx/conf.d/default.conf
+docker exec polaris-frontend-new cat /etc/nginx/conf.d/default.conf
 ```
 
 ### 3. 네트워크 연결 실패
@@ -345,10 +345,10 @@ docker network ls | grep npm_network
 docker network create npm_network
 
 # 컨테이너를 네트워크에 연결
-docker network connect npm_network ondo-frontend
+docker network connect npm_network polaris-frontend
 
 # NPM에서 Proxy Host 확인
-# Forward Hostname/IP: ondo-frontend (컨테이너 이름)
+# Forward Hostname/IP: polaris-frontend (컨테이너 이름)
 # Forward Port: 80
 ```
 
@@ -395,10 +395,10 @@ docker system prune -a --volumes
 
 ```bash
 # 컨테이너 상태 확인
-docker ps | grep ondo-frontend
+docker ps | grep polaris-frontend
 
 # 컨테이너 로그 확인
-docker logs -f ondo-frontend --tail 100
+docker logs -f polaris-frontend --tail 100
 
 # Health Check
 curl http://localhost:80
@@ -406,7 +406,7 @@ curl http://localhost:80
 curl https://your-domain.com
 
 # 리소스 사용량 확인
-docker stats ondo-frontend
+docker stats polaris-frontend
 ```
 
 ### 알림 설정 (선택사항)
