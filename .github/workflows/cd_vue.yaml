@@ -62,11 +62,21 @@ jobs:
             echo "2. 최신 이미지 다운로드 중..."
             docker pull ${IMAGE}
 
+            # 기존 임시 컨테이너 정리 (이전 배포 실패 시 남아있을 수 있음)
+            echo "3. 기존 임시 컨테이너 정리 중..."
+            if docker ps -a --format '{{.Names}}' | grep -q "^${NEW_CONTAINER}$"; then
+              echo "   기존 임시 컨테이너 발견 - 제거 중..."
+              docker stop ${NEW_CONTAINER} || true
+              docker rm ${NEW_CONTAINER} || true
+            else
+              echo "   기존 임시 컨테이너 없음"
+            fi
+
             # 새 컨테이너 실행 (임시 이름)
-            echo "3. 새 컨테이너 실행 중... (이름: ${NEW_CONTAINER})"
+            echo "4. 새 컨테이너 실행 중... (이름: ${NEW_CONTAINER})"
             docker run -d \
               --name ${NEW_CONTAINER} \
-              --network web \
+              --network npm_network \
               --restart unless-stopped \
               ${IMAGE}
 
