@@ -74,19 +74,19 @@ jobs:
               echo "   기존 임시 컨테이너 없음"
             fi
 
-            # 새 컨테이너 실행 (임시 이름, 외부 포트 공개 포함)
+            # 새 컨테이너 실행 (외부 8080 → 내부 3000 포트 매핑)
             echo "4. 새 컨테이너 실행 중... (이름: ${NEW_CONTAINER})"
             docker run -d \
               --name ${NEW_CONTAINER} \
               --network npm_network \
-              -p 8080:80 \
+              -p 8080:3000 \
               --restart unless-stopped \
               ${IMAGE}
 
-            # Health check - 새 컨테이너가 준비될 때까지 대기
+            # Health check - 새 컨테이너가 준비될 때까지 대기 (내부 3000포트 체크)
             echo "4. Health check 중..."
             for i in {1..30}; do
-              if docker exec ${NEW_CONTAINER} wget --quiet --tries=1 --spider http://localhost/ 2>/dev/null; then
+              if docker exec ${NEW_CONTAINER} wget --quiet --tries=1 --spider http://localhost:3000/ 2>/dev/null; then
                 echo "   ✓ 새 컨테이너 정상 동작 확인 (${i}초 경과)"
                 break
               fi
