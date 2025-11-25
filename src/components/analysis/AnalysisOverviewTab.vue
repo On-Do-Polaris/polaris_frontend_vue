@@ -9,6 +9,7 @@ import {
   BarElement,
   CategoryScale,
   LinearScale,
+  type TooltipItem,
 } from 'chart.js';
 
 ChartJS.register(
@@ -103,12 +104,12 @@ const chartOptions = computed(() => ({
     },
     tooltip: {
       callbacks: {
-        title: (tooltipItems: any) => {
+        title: (tooltipItems: TooltipItem<'bar'>[]) => {
           const index = tooltipItems[0]?.dataIndex;
           if (index === undefined) return '';
           return currentData.value[index]?.name || '';
         },
-        label: (tooltipItem: any) => {
+        label: (tooltipItem: TooltipItem<'bar'>) => {
           const index = tooltipItem?.dataIndex;
           if (index === undefined) return '';
           const data = currentData.value[index];

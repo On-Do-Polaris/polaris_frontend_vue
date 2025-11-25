@@ -53,10 +53,18 @@ const riskFactors: RiskFactor[] = [
   '산불',
 ];
 
+interface PeriodData {
+  period: string;
+  SSP1: number;
+  SSP2: number;
+  SSP4: number;
+  SSP5: number;
+}
+
 const getDataByPeriod = (
   period: Period,
   riskFactor: RiskFactor
-): any[] => {
+): PeriodData[] => {
   const currentRiskScores: Record<RiskFactor, number> = {
     '이상 고온': 85,
     '물 부족': 72,
