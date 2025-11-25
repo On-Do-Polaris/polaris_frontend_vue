@@ -53,7 +53,7 @@ jobs:
             IMAGE="${REGISTRY}/${NAMESPACE}/${IMAGE_NAME}:latest"
 
             # 필요시 네트워크 생성
-            docker network create npm_network || true
+            docker network create web || true
 
             # OCIR 로그인
             echo "1. OCIR 로그인 중..."
@@ -78,7 +78,7 @@ jobs:
             echo "4. 새 컨테이너 실행 중... (이름: ${CONTAINER_NAME})"
             docker run -d \
               --name ${CONTAINER_NAME} \
-              --network npm_network \
+              --network web \
               --restart unless-stopped \
               ${IMAGE}
 
