@@ -267,7 +267,7 @@ docker run -d \
   --name ondo-frontend \
   --network npm_network \
   --restart unless-stopped \
-  ap-seoul-1.ocir.io/namespace/ondo-frontend:main-<이전SHA>
+  ap-seoul-1.ocir.io/namespace/polaris-frontend:main-<이전SHA>
 ```
 
 #### 방법 2: 이전 커밋으로 재배포

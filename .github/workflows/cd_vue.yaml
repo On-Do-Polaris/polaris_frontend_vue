@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: ondo-frontend
+  IMAGE_NAME: polaris-frontend
   CONTAINER_NAME: ondo-frontend
 
 jobs:

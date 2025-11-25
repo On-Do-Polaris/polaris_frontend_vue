@@ -8,7 +8,7 @@ on:
     branches: [main, develop]
 
 env:
-  IMAGE_NAME: ondo-frontend
+  IMAGE_NAME: polaris-frontend
 
 jobs:
   test:
