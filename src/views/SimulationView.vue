@@ -34,8 +34,10 @@ type SimulationType = 'location' | 'climate';
 
 interface CandidateLocation {
   name: string;
+  address: string;
   region: string;
   rating: 'low' | 'medium' | 'high';
+  riskLevel: string;
   ratingLabel: string;
   coordinates: { lat: number; lng: number };
   riskScore: number;
@@ -52,6 +54,8 @@ interface CandidateLocation {
   };
   advantages: string[];
   disadvantages: string[];
+  carbonImpact: number;
+  costChange: number;
 }
 
 const sitesStore = useSitesStore();
@@ -63,8 +67,10 @@ const selectedCandidate = ref(0);
 const candidateLocations: CandidateLocation[] = [
   {
     name: '세종 데이터센터 부지',
+    address: '세종시 조치원읍 세종로 209',
     region: '세종시 조치원읍',
     rating: 'low',
+    riskLevel: 'low',
     ratingLabel: '낮음',
     coordinates: { lat: 36.6002, lng: 127.2875 },
     riskScore: 28,
@@ -73,11 +79,15 @@ const candidateLocations: CandidateLocation[] = [
     risks: { flood: 15, typhoon: 25, heatwave: 45, earthquake: 20, drought: 30, heavyRain: 35, coldWave: 40 },
     advantages: ['홍수 위험 62% 감소', '지진 위험도 낮은 지역', '전력 공급 안정성 우수', '재난 대응 인프라 구축'],
     disadvantages: ['초기 구축 비용 증가', '인력 이동 필요'],
+    carbonImpact: -8500,
+    costChange: 25000,
   },
   {
     name: '당진 산업단지',
+    address: '충청남도 당진시 송악읍 한진1길 15',
     region: '충남 당진시',
     rating: 'medium',
+    riskLevel: 'medium',
     ratingLabel: '중간',
     coordinates: { lat: 36.8934, lng: 126.6475 },
     riskScore: 52,
@@ -86,11 +96,15 @@ const candidateLocations: CandidateLocation[] = [
     risks: { flood: 40, typhoon: 35, heatwave: 50, earthquake: 25, drought: 45, heavyRain: 55, coldWave: 50 },
     advantages: ['항만 접근성 우수', '산업단지 조성', '전력 공급 안정'],
     disadvantages: ['해안가로 태풍 리스크', '홍수 취약 지역'],
+    carbonImpact: -3200,
+    costChange: 15000,
   },
   {
     name: '구미 국가산단',
+    address: '경상북도 구미시 공단동 산업로 123',
     region: '경북 구미시',
     rating: 'medium',
+    riskLevel: 'medium',
     ratingLabel: '중간',
     coordinates: { lat: 36.1136, lng: 128.3446 },
     riskScore: 58,
@@ -99,6 +113,8 @@ const candidateLocations: CandidateLocation[] = [
     risks: { flood: 30, typhoon: 20, heatwave: 55, earthquake: 35, drought: 40, heavyRain: 35, coldWave: 45 },
     advantages: ['국가산단 인프라', '기술인력 풍부', '중부권 물류 거점'],
     disadvantages: ['하천 범람 위험', '여름 폭염 심화'],
+    carbonImpact: -1800,
+    costChange: 8000,
   },
 ];
 
