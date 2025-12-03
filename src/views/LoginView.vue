@@ -1,30 +1,44 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Lock, User } from 'lucide-vue-next';
-import { useAuthStore } from '@/store/auth';
-import { useRouter } from 'vue-router';
-import skLogo from '@/assets/sk-logo.svg';
+import { ref } from 'vue'
+import { Lock, User, Loader2 } from 'lucide-vue-next'
+import { useAuthStore } from '@/store/auth'
+import { useRouter, useRoute } from 'vue-router'
+import skLogo from '@/assets/sk-logo.svg'
 
-const authStore = useAuthStore();
-const router = useRouter();
+const authStore = useAuthStore()
+const router = useRouter()
+const route = useRoute()
 
-const email = ref('');
-const password = ref('');
+const email = ref('')
+const password = ref('')
+const loading = ref(false)
 
-const handleSubmit = () => {
-  authStore.handleLogin(email.value, password.value);
-  if (authStore.isLoggedIn) {
-    router.push('/');
+const handleSubmit = async () => {
+  if (loading.value) return
+
+  loading.value = true
+
+  try {
+    await authStore.handleLogin(email.value, password.value)
+
+    // 로그인 성공 시 redirect 쿼리가 있으면 해당 페이지로, 없으면 대시보드로 이동
+    const redirect = route.query.redirect as string
+    router.push(redirect || '/')
+  } catch (error) {
+    // 에러는 authStore에서 이미 toast로 표시됨
+    console.error('로그인 실패:', error)
+  } finally {
+    loading.value = false
   }
-};
+}
 
 const goToSignup = () => {
-  router.push('/signup');
-};
+  router.push('/signup')
+}
 
 const goToForgotPassword = () => {
-  router.push('/forgot-password');
-};
+  router.push('/forgot-password')
+}
 </script>
 
 <template>
@@ -40,42 +54,48 @@ const goToForgotPassword = () => {
 
         <form @submit.prevent="handleSubmit" class="space-y-6">
           <div>
-            <label class="block text-sm text-gray-700 mb-2">
-              이메일
-            </label>
+            <label class="block text-sm text-gray-700 mb-2"> 이메일 </label>
             <div class="relative">
-              <User class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :size="20" />
+              <User
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                :size="20"
+              />
               <input
                 type="email"
                 v-model="email"
                 class="w-full pl-10 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-[#EA002C]"
                 placeholder="email@skax.co.kr"
                 required
+                :disabled="loading"
               />
             </div>
           </div>
 
           <div>
-            <label class="block text-sm text-gray-700 mb-2">
-              비밀번호
-            </label>
+            <label class="block text-sm text-gray-700 mb-2"> 비밀번호 </label>
             <div class="relative">
-              <Lock class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :size="20" />
+              <Lock
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                :size="20"
+              />
               <input
                 type="password"
                 v-model="password"
                 class="w-full pl-10 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-[#EA002C]"
                 placeholder="비밀번호를 입력하세요"
                 required
+                :disabled="loading"
               />
             </div>
           </div>
 
           <button
             type="submit"
-            class="w-full bg-[#EA002C] text-white py-3 hover:bg-[#C4002A] transition-colors text-center"
+            :disabled="loading"
+            class="w-full bg-[#EA002C] text-white py-3 hover:bg-[#C4002A] transition-colors text-center flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            로그인
+            <Loader2 v-if="loading" class="animate-spin mr-2" :size="20" />
+            {{ loading ? '로그인 중...' : '로그인' }}
           </button>
         </form>
 
@@ -85,9 +105,7 @@ const goToForgotPassword = () => {
         </div>
       </div>
 
-      <p class="mt-6 text-center text-sm text-gray-600">
-        © 2025 SKALA. All rights reserved.
-      </p>
+      <p class="mt-6 text-center text-sm text-gray-600">© 2025 SKALA. All rights reserved.</p>
     </div>
   </div>
 </template>

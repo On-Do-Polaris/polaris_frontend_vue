@@ -1,59 +1,84 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Lock, User, Building, Mail } from 'lucide-vue-next';
-import { useAuthStore } from '@/store/auth';
-import { useUiStore } from '@/store/ui';
-import { useRouter } from 'vue-router';
-import { toast } from 'vue-sonner';
-import skLogo from '@/assets/sk-logo.svg';
+import { ref } from 'vue'
+import { Lock, Building, Mail, Loader2 } from 'lucide-vue-next'
+import { useAuthStore } from '@/store/auth'
+import { useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
+import skLogo from '@/assets/sk-logo.svg'
 
-const authStore = useAuthStore();
-const uiStore = useUiStore();
-const router = useRouter();
+const authStore = useAuthStore()
+const router = useRouter()
 
-const email = ref('');
-const name = ref('');
-const password = ref('');
-const passwordConfirm = ref('');
-const verificationCode = ref('');
-const isCodeSent = ref(false);
-const isVerified = ref(false);
+const email = ref('')
+const name = ref('')
+const password = ref('')
+const passwordConfirm = ref('')
+const verificationCode = ref('')
+const isCodeSent = ref(false)
+const isVerified = ref(false)
+const loading = ref(false)
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
+  // 이메일 인증 체크 (선택사항)
   if (!isVerified.value) {
-    toast.error('이메일 인증을 완료해주세요.');
-    return;
+    toast.error('이메일 인증을 완료해주세요.')
+    return
   }
+
+  // 비밀번호 확인
   if (password.value !== passwordConfirm.value) {
-    toast.error('비밀번호가 일치하지 않습니다.');
-    return;
+    toast.error('비밀번호가 일치하지 않습니다.')
+    return
   }
-  authStore.handleSignup(email.value);
-  uiStore.setShowOnboarding(true);
-  router.push('/');
-};
+
+  // 비밀번호 길이 체크
+  if (password.value.length < 8) {
+    toast.error('비밀번호는 최소 8자 이상이어야 합니다.')
+    return
+  }
+
+  if (loading.value) return
+
+  loading.value = true
+
+  try {
+    await authStore.handleSignup(email.value, name.value, password.value)
+
+    // 회원가입 성공 시 로그인 페이지로 이동
+    toast.success('회원가입이 완료되었습니다. 로그인해주세요.')
+    router.push('/login')
+  } catch (error) {
+    // 에러는 authStore에서 이미 toast로 표시됨
+    console.error('회원가입 실패:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
 const handleSendCode = () => {
   if (!email.value) {
-    toast.error('이메일을 입력해주세요.');
-    return;
+    toast.error('이메일을 입력해주세요.')
+    return
   }
-  isCodeSent.value = true;
-  toast.success('인증번호가 이메일로 전송되었습니다.');
-};
+
+  // TODO: 실제 이메일 인증 API가 구현되면 연동
+  isCodeSent.value = true
+  toast.success('인증번호가 이메일로 전송되었습니다.')
+}
 
 const handleVerifyCode = () => {
+  // TODO: 실제 인증번호 검증 API가 구현되면 연동
   if (verificationCode.value === '123456') {
-    isVerified.value = true;
-    toast.success('이메일 인증이 완료되었습니다.');
+    isVerified.value = true
+    toast.success('이메일 인증이 완료되었습니다.')
   } else {
-    toast.error('인증번호가 올바르지 않습니다.');
+    toast.error('인증번호가 올바르지 않습니다.')
   }
-};
+}
 
 const goToLogin = () => {
-  router.push('/login');
-};
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -69,130 +94,133 @@ const goToLogin = () => {
 
         <form @submit.prevent="handleSubmit" class="space-y-5">
           <div>
-            <label class="block text-sm text-gray-700 mb-2">
-              이메일
-            </label>
+            <label class="block text-sm text-gray-700 mb-2"> 이메일 </label>
             <div class="relative flex gap-2">
               <div class="flex-1 relative">
-                <Mail class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :size="20" />
+                <Mail
+                  class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  :size="20"
+                />
                 <input
                   type="email"
                   v-model="email"
                   class="w-full pl-10 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-[#EA002C]"
                   placeholder="email@skax.co.kr"
                   required
-                  :disabled="isVerified"
+                  :disabled="isVerified || loading"
                 />
               </div>
               <button
                 type="button"
                 @click="handleSendCode"
-                :disabled="isVerified"
+                :disabled="isVerified || loading"
                 class="w-[120px] py-3 bg-gray-600 text-white hover:bg-gray-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap text-sm text-center"
               >
-                {{ isVerified ? "인증완료" : "인증번호 받기" }}
+                {{ isVerified ? '인증완료' : '인증번호 받기' }}
               </button>
             </div>
           </div>
 
           <div v-if="isCodeSent && !isVerified">
-            <label class="block text-sm text-gray-700 mb-2">
-              인증번호
-            </label>
+            <label class="block text-sm text-gray-700 mb-2"> 인증번호 </label>
             <div class="relative flex gap-2">
               <div class="flex-1 relative">
-                <Lock class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :size="20" />
+                <Lock
+                  class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  :size="20"
+                />
                 <input
                   type="text"
                   v-model="verificationCode"
                   class="w-full pl-10 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-[#EA002C]"
                   placeholder="인증번호 6자리"
                   maxlength="6"
+                  :disabled="loading"
                 />
               </div>
               <button
                 type="button"
                 @click="handleVerifyCode"
-                class="w-[120px] py-3 bg-[#F47725] text-white hover:bg-[#E06515] transition-colors whitespace-nowrap text-sm text-center"
+                :disabled="loading"
+                class="w-[120px] py-3 bg-[#F47725] text-white hover:bg-[#E06515] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm text-center"
               >
                 확인
               </button>
             </div>
-            <p class="text-xs text-gray-500 mt-2">
-              테스트용 인증번호: 123456
-            </p>
+            <p class="text-xs text-gray-500 mt-2">테스트용 인증번호: 123456</p>
           </div>
 
           <div>
-            <label class="block text-sm text-gray-700 mb-2">
-              담당자 이름
-            </label>
+            <label class="block text-sm text-gray-700 mb-2"> 담당자 이름 </label>
             <div class="relative">
-              <Building class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :size="20" />
+              <Building
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                :size="20"
+              />
               <input
                 type="text"
                 v-model="name"
                 class="w-full pl-10 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-[#EA002C]"
                 placeholder="담당자 이름을 입력하세요"
                 required
+                :disabled="loading"
               />
             </div>
           </div>
 
           <div>
-            <label class="block text-sm text-gray-700 mb-2">
-              비밀번호
-            </label>
+            <label class="block text-sm text-gray-700 mb-2"> 비밀번호 </label>
             <div class="relative">
-              <Lock class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :size="20" />
+              <Lock
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                :size="20"
+              />
               <input
                 type="password"
                 v-model="password"
                 class="w-full pl-10 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-[#EA002C]"
-                placeholder="비밀번호를 입력하세요"
+                placeholder="비밀번호를 입력하세요 (최소 8자)"
                 required
+                :disabled="loading"
               />
             </div>
           </div>
 
           <div>
-            <label class="block text-sm text-gray-700 mb-2">
-              비밀번호 확인
-            </label>
+            <label class="block text-sm text-gray-700 mb-2"> 비밀번호 확인 </label>
             <div class="relative">
-              <Lock class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :size="20" />
+              <Lock
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                :size="20"
+              />
               <input
                 type="password"
                 v-model="passwordConfirm"
                 class="w-full pl-10 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-[#EA002C]"
                 placeholder="비밀번호를 다시 입력하세요"
                 required
+                :disabled="loading"
               />
             </div>
           </div>
 
           <button
             type="submit"
-            class="w-full bg-[#EA002C] text-white py-3 hover:bg-[#C4002A] transition-colors text-center mt-6"
+            :disabled="loading"
+            class="w-full bg-[#EA002C] text-white py-3 hover:bg-[#C4002A] transition-colors text-center mt-6 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            회원가입
+            <Loader2 v-if="loading" class="animate-spin mr-2" :size="20" />
+            {{ loading ? '회원가입 중...' : '회원가입' }}
           </button>
         </form>
 
         <div class="mt-6 text-center text-sm text-gray-600">
           <span>이미 계정이 있으신가요? </span>
-          <button
-            @click="goToLogin"
-            class="text-[#EA002C] hover:underline"
-          >
-            로그인
-          </button>
+          <button @click="goToLogin" class="text-[#EA002C] hover:underline">로그인</button>
         </div>
       </div>
 
-      <p class="mt-6 text-center text-sm text-gray-600">
-        © 2025 SKALA. All rights reserved.
-      </p>
+      <p class="mt-6 text-center text-sm text-gray-600">© 2025 SKALA. All rights reserved.</p>
     </div>
   </div>
 </template>
