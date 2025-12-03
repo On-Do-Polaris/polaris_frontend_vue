@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
+import axios, { type AxiosInstance, AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import type { ApiError } from './types'
 
 // 환경 변수에서 API Base URL 가져오기
@@ -9,8 +9,8 @@ const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000, // 30초
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 })
 
 // 요청 인터셉터: 모든 요청에 토큰 자동 추가
@@ -24,7 +24,7 @@ apiClient.interceptors.request.use(
   },
   (error: AxiosError) => {
     return Promise.reject(error)
-  }
+  },
 )
 
 // 응답 인터셉터: 401 에러 시 토큰 자동 갱신
@@ -45,7 +45,7 @@ apiClient.interceptors.response.use(
 
         // 토큰 갱신 요청
         const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-          refreshToken
+          refreshToken,
         })
 
         const { accessToken, refreshToken: newRefreshToken } = response.data
@@ -68,7 +68,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error)
-  }
+  },
 )
 
 export default apiClient
