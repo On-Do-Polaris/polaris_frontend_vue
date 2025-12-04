@@ -1,476 +1,343 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import {
-  MapPin,
-  Search,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  CheckCircle,
-  XCircle,
-} from 'lucide-vue-next';
-import type { Site } from '@/assets/data/sites';
-import {
-  Bar,
-  Radar,
-} from 'vue-chartjs';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js';
-
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
-
-interface CandidateLocation {
-  name: string;
-  address: string;
-  coordinates: { lat: number; lng: number };
-  riskLevel: string;
-  riskScore: number;
-  risks: {
-    flood: number;
-    typhoon: number;
-    heatwave: number;
-    earthquake: number;
-    drought: number;
-    heavyRain: number;
-    coldWave: number;
-  };
-  aal: number;
-  cvar: number;
-  advantages: string[];
-  disadvantages: string[];
-  carbonImpact: number;
-  costChange: number;
-}
+import { ref } from 'vue'
+import { Plus, Trash2, Play, Loader2 } from 'lucide-vue-next'
+import { useSimulation } from '@/composables/useSimulation'
+import { toast } from 'vue-sonner'
+import type { Site } from '@/api/types'
 
 interface Props {
-  site?: Site;
-  selectedCandidateData?: CandidateLocation;
+  selectedSiteId: string
+  sites: Site[]
 }
 
-const props = defineProps<Props>();
+interface Candidate {
+  location: string
+  address: string
+  latitude: number
+  longitude: number
+}
 
-const newAddress = ref('');
-const isSimulating = ref(false);
-const simulationResult = ref<CandidateLocation | null>(props.selectedCandidateData || null);
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  'update:selectedSiteId': [value: string]
+}>()
 
-// Mock locations with different risk profiles
-const candidateLocations = [
-  {
-    name: '세종특별자치시 연기면',
-    address: '세종특별자치시 연기면 세종로 209',
-    coordinates: { lat: 36.5040, lng: 127.2494 },
-    riskLevel: 'low',
-    riskScore: 32,
-    risks: {
-      flood: 15,
-      typhoon: 25,
-      heatwave: 45,
-      earthquake: 20,
-      drought: 30,
-      heavyRain: 35,
-      coldWave: 40,
-    },
-    aal: 3200,
-    cvar: 48,
-    advantages: ['내륙 지역으로 태풍 피해 적음', '신도시로 인프라 우수', '정부 지원 정책 혜택'],
-    disadvantages: ['물류비 증가 (항만 거리)', '인력 수급 어려움'],
-    carbonImpact: -8500,
-    costChange: 25000,
-  },
-  {
-    name: '충청남도 당진시 송악읍',
-    address: '충청남도 당진시 송악읍 한진1길 15',
-    coordinates: { lat: 36.9005, lng: 126.6471 },
-    riskLevel: 'medium',
-    riskScore: 48,
-    risks: {
-      flood: 40,
-      typhoon: 35,
-      heatwave: 50,
-      earthquake: 25,
-      drought: 45,
-      heavyRain: 55,
-      coldWave: 50,
-    },
-    aal: 6800,
-    cvar: 95,
-    advantages: ['항만 접근성 우수', '산업단지 조성', '전력 공급 안정'],
-    disadvantages: ['해안가로 태풍 리스크', '홍수 취약 지역'],
-    carbonImpact: -3500,
-    costChange: 8000,
-  },
-  {
-    name: '경상북도 구미시 임수동',
-    address: '경상북도 구미시 임수동 산업로 55',
-    coordinates: { lat: 36.1136, lng: 128.3445 },
-    riskLevel: 'low',
-    riskScore: 38,
-    risks: {
-      flood: 30,
-      typhoon: 20,
-      heatwave: 55,
-      earthquake: 35,
-      drought: 40,
-      heavyRain: 35,
-      coldWave: 45,
-    },
-    aal: 4100,
-    cvar: 62,
-    advantages: ['국가산단 인프라', '기술인력 풍부', '중부권 물류 거점'],
-    disadvantages: ['하천 범람 위험', '여름 폭염 심화'],
-    carbonImpact: -5200,
-    costChange: 12000,
-  },
-];
+const { compareRelocation, relocationResult, loading } = useSimulation()
 
-const handleSimulate = () => {
-  isSimulating.value = true;
-  // Simulate API call
-  setTimeout(() => {
-    // Find matching location or use random
-    const result = candidateLocations[Math.floor(Math.random() * candidateLocations.length)] as CandidateLocation;
-    simulationResult.value = result;
-    isSimulating.value = false;
-  }, 1500);
-};
+const candidates = ref<Candidate[]>([])
+const newCandidate = ref<Candidate>({
+  location: '',
+  address: '',
+  latitude: 0,
+  longitude: 0
+})
+const isRunning = ref(false)
 
-const currentRiskScore = 68;
-const currentAAL = 12500;
-const currentCVaR = 185;
+// 후보지 추가
+const addCandidate = () => {
+  if (!newCandidate.value.location || !newCandidate.value.address) {
+    toast.error('위치명과 주소를 입력해주세요')
+    return
+  }
 
-const currentRisks = computed(() => [
-  { category: '홍수', current: 65, simulated: simulationResult.value?.risks.flood || 0 },
-  { category: '태풍', current: 75, simulated: simulationResult.value?.risks.typhoon || 0 },
-  { category: '폭염', current: 55, simulated: simulationResult.value?.risks.heatwave || 0 },
-  { category: '지진', current: 30, simulated: simulationResult.value?.risks.earthquake || 0 },
-  { category: '가뭄', current: 40, simulated: simulationResult.value?.risks.drought || 0 },
-  { category: '집중호우', current: 70, simulated: simulationResult.value?.risks.heavyRain || 0 },
-  { category: '한파', current: 45, simulated: simulationResult.value?.risks.coldWave || 0 },
-]);
+  if (newCandidate.value.latitude === 0 || newCandidate.value.longitude === 0) {
+    toast.error('위도와 경도를 입력해주세요')
+    return
+  }
 
-const radarData = computed(() => ({
-  labels: ['홍수', '태풍', '폭염', '지진', '가뭄', '집중호우', '한파'],
-  datasets: [
-    {
-      label: '현재 위치',
-      data: [65, 75, 55, 30, 40, 70, 45],
-      backgroundColor: 'rgba(220, 38, 38, 0.3)',
-      borderColor: '#dc2626',
-      borderWidth: 2,
-      pointBackgroundColor: '#dc2626',
-    },
-    {
-      label: '후보 위치',
-      data: [
-        simulationResult.value?.risks.flood || 0,
-        simulationResult.value?.risks.typhoon || 0,
-        simulationResult.value?.risks.heatwave || 0,
-        simulationResult.value?.risks.earthquake || 0,
-        simulationResult.value?.risks.drought || 0,
-        simulationResult.value?.risks.heavyRain || 0,
-        simulationResult.value?.risks.coldWave || 0,
-      ],
-      backgroundColor: 'rgba(16, 185, 129, 0.3)',
-      borderColor: '#10b981',
-      borderWidth: 2,
-      pointBackgroundColor: '#10b981',
-    },
-  ],
-}));
+  candidates.value.push({ ...newCandidate.value })
+  newCandidate.value = {
+    location: '',
+    address: '',
+    latitude: 0,
+    longitude: 0
+  }
+  toast.success('후보지가 추가되었습니다')
+}
 
-const barChartData = computed(() => ({
-  labels: currentRisks.value.map((r) => r.category),
-  datasets: [
-    {
-      label: '현재 위치',
-      data: currentRisks.value.map((r) => r.current),
-      backgroundColor: '#dc2626',
-    },
-    {
-      label: '후보 위치',
-      data: currentRisks.value.map((r) => r.simulated),
-      backgroundColor: '#10b981',
-    },
-  ],
-}));
+// 후보지 삭제
+const removeCandidate = (index: number) => {
+  candidates.value.splice(index, 1)
+  toast.success('후보지가 삭제되었습니다')
+}
 
-const barChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  scales: {
-    y: {
-      beginAtZero: true,
-      title: {
-        display: true,
-        text: '리스크 점수',
-      },
-    },
-  },
-  plugins: {
-    legend: {
-      display: true,
-    },
-  },
-};
+// 시뮬레이션 실행
+const handleRunSimulation = async () => {
+  if (!props.selectedSiteId) {
+    toast.error('사업장을 선택해주세요')
+    return
+  }
 
-const radarChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  scales: {
-    r: {
-      beginAtZero: true,
-      max: 100,
-      ticks: {
-        stepSize: 20,
-      },
-    },
-  },
-  plugins: {
-    legend: {
-      display: true,
-    },
-  },
-};
+  if (candidates.value.length === 0) {
+    toast.error('최소 1개의 후보지를 추가해주세요')
+    return
+  }
 
+  isRunning.value = true
+
+  try {
+    await compareRelocation({
+      currentSiteId: props.selectedSiteId,
+      candidates: candidates.value
+    })
+
+    toast.success('위치 시뮬레이션이 완료되었습니다')
+  } catch (error) {
+    console.error('위치 시뮬레이션 실패:', error)
+    toast.error('위치 시뮬레이션에 실패했습니다')
+  } finally {
+    isRunning.value = false
+  }
+}
+
+// 리스크 레벨 색상
 const getRiskLevelColor = (level: string) => {
-  if (level === 'high') return 'bg-red-500';
-  if (level === 'medium') return 'bg-yellow-500';
-  return 'bg-green-500';
-};
+  if (level === 'CRITICAL') return 'bg-[#EA002C] text-white'
+  if (level === 'HIGH') return 'bg-[#F47725] text-white'
+  if (level === 'MODERATE') return 'bg-[#F4C430] text-white'
+  return 'bg-[#B3CF0A] text-white'
+}
 
-const selectCandidateLocation = (location: CandidateLocation) => {
-  newAddress.value = location.address;
-  simulationResult.value = location;
-};
+// 리스크 레벨 텍스트
+const getRiskLevelText = (level: string) => {
+  if (level === 'CRITICAL') return '매우 높음'
+  if (level === 'HIGH') return '높음'
+  if (level === 'MODERATE') return '보통'
+  return '낮음'
+}
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Simulation Result -->
-    <template v-if="simulationResult && site">
-      <!-- Map Visualization -->
-      <div class="border border-gray-200 bg-white p-6">
-        <h4 class="text-gray-900 mb-4">위치 비교</h4>
-        <div class="relative w-full h-[400px] bg-gray-100 border border-gray-300">
-          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1000 400">
-            <!-- Korea outline -->
-            <path
-              d="M 400 80 L 450 60 L 500 80 L 520 130 L 550 180 L 560 260 L 540 330 L 500 370 L 450 380 L 400 370 L 380 330 L 370 260 L 390 180 L 400 130 Z"
-              fill="none"
-              stroke="#d1d5db"
-              stroke-width="2"
+    <!-- 설정 패널 -->
+    <div class="bg-white border border-gray-200 shadow-sm">
+      <div class="border-b border-gray-200 px-6 py-3 bg-gray-50">
+        <h3 class="text-sm text-gray-900">시뮬레이션 설정</h3>
+      </div>
+      <div class="p-6 space-y-4">
+        <!-- 현재 사업장 선택 -->
+        <div>
+          <label class="block text-xs text-gray-600 mb-2">현재 사업장</label>
+          <select
+            :value="selectedSiteId"
+            @change="emit('update:selectedSiteId', ($event.target as HTMLSelectElement).value)"
+            class="w-full px-3 py-2 text-sm border border-gray-300 bg-white focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C]"
+          >
+            <option value="">사업장 선택</option>
+            <option v-for="site in sites" :key="site.siteId" :value="site.siteId">
+              {{ site.siteName }}
+            </option>
+          </select>
+        </div>
+
+        <!-- 후보지 추가 -->
+        <div class="border-t border-gray-200 pt-4">
+          <label class="block text-xs text-gray-600 mb-2">후보지 추가</label>
+          <div class="grid grid-cols-2 gap-3 mb-2">
+            <input
+              v-model="newCandidate.location"
+              type="text"
+              placeholder="위치명 (예: 세종 데이터센터)"
+              class="px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C]"
             />
-
-            <!-- Connection Line -->
-            <line
-              :x1="400 + (site.coordinates.lng - 127) * 50"
-              :y1="250 - (site.coordinates.lat - 35) * 50"
-              :x2="400 + (simulationResult.coordinates.lng - 127) * 50"
-              :y2="250 - (simulationResult.coordinates.lat - 35) * 50"
-              stroke="#3b82f6"
-              stroke-width="2"
-              stroke-dasharray="5,5"
+            <input
+              v-model="newCandidate.address"
+              type="text"
+              placeholder="주소"
+              class="px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C]"
             />
+            <input
+              v-model.number="newCandidate.latitude"
+              type="number"
+              step="0.000001"
+              placeholder="위도 (예: 36.5040)"
+              class="px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C]"
+            />
+            <input
+              v-model.number="newCandidate.longitude"
+              type="number"
+              step="0.000001"
+              placeholder="경도 (예: 127.2494)"
+              class="px-3 py-2 text-sm border border-gray-300 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C]"
+            />
+          </div>
+          <button
+            @click="addCandidate"
+            class="px-4 py-2 text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center gap-2"
+          >
+            <Plus :size="16" />
+            <span>후보지 추가</span>
+          </button>
+        </div>
 
-            <!-- Current Location -->
-            <g>
-              <circle
-                :cx="400 + (site.coordinates.lng - 127) * 50"
-                :cy="250 - (site.coordinates.lat - 35) * 50"
-                r="20"
-                fill="#dc2626"
-                opacity="0.8"
-              />
-              <text
-                :x="400 + (site.coordinates.lng - 127) * 50"
-                :y="250 - (site.coordinates.lat - 35) * 50 - 30"
-                text-anchor="middle"
-                font-size="14"
-                font-weight="600"
-                fill="#111827"
-              >
-                현재 위치
-              </text>
-              <text
-                :x="400 + (site.coordinates.lng - 127) * 50"
-                :y="250 - (site.coordinates.lat - 35) * 50 - 15"
-                text-anchor="middle"
-                font-size="12"
-                fill="#dc2626"
-              >
-                {{ site.name }}
-              </text>
-            </g>
-
-            <!-- New Location -->
-            <g>
-              <circle
-                :cx="400 + (simulationResult.coordinates.lng - 127) * 50"
-                :cy="250 - (simulationResult.coordinates.lat - 35) * 50"
-                r="20"
-                fill="#10b981"
-                opacity="0.8"
-              />
-              <text
-                :x="400 + (simulationResult.coordinates.lng - 127) * 50"
-                :y="250 - (simulationResult.coordinates.lat - 35) * 50 - 30"
-                text-anchor="middle"
-                font-size="14"
-                font-weight="600"
-                fill="#111827"
-              >
-                후보 위치
-              </text>
-              <text
-                :x="400 + (simulationResult.coordinates.lng - 127) * 50"
-                :y="250 - (simulationResult.coordinates.lat - 35) * 50 - 15"
-                text-anchor="middle"
-                font-size="12"
-                fill="#10b981"
-              >
-                {{ simulationResult.name }}
-              </text>
-            </g>
-          </svg>
-
-          <!-- Legend -->
-          <div class="absolute bottom-4 left-4 bg-white p-3 border border-gray-300 shadow-sm">
-            <div class="space-y-2 text-xs">
-              <div class="flex items-center gap-2">
-                <div class="w-4 h-4 rounded-full bg-red-600"></div>
-                <span>현재 위치 (리스크: {{ currentRiskScore }})</span>
+        <!-- 추가된 후보지 목록 -->
+        <div v-if="candidates.length > 0" class="border-t border-gray-200 pt-4">
+          <label class="block text-xs text-gray-600 mb-2">추가된 후보지 ({{ candidates.length }}개)</label>
+          <div class="space-y-2">
+            <div
+              v-for="(candidate, index) in candidates"
+              :key="index"
+              class="flex items-center justify-between border border-gray-200 p-3"
+            >
+              <div class="flex-1">
+                <div class="text-sm text-gray-900">{{ candidate.location }}</div>
+                <div class="text-xs text-gray-600">{{ candidate.address }}</div>
+                <div class="text-xs text-gray-500 mt-1">
+                  위도: {{ candidate.latitude }}, 경도: {{ candidate.longitude }}
+                </div>
               </div>
-              <div class="flex items-center gap-2">
-                <div class="w-4 h-4 rounded-full bg-green-500"></div>
-                <span>후보 위치 (리스크: {{ simulationResult.riskScore }})</span>
+              <button
+                @click="removeCandidate(index)"
+                class="px-2 py-1 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 :size="16" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 실행 버튼 -->
+        <div class="border-t border-gray-200 pt-4">
+          <button
+            @click="handleRunSimulation"
+            :disabled="loading || isRunning || !selectedSiteId || candidates.length === 0"
+            class="w-full px-4 py-2 text-sm bg-[#EA002C] text-white hover:bg-[#C4002A] transition-colors flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            <Loader2 v-if="loading || isRunning" :size="16" class="animate-spin" />
+            <Play v-else :size="16" />
+            <span>{{ loading || isRunning ? '실행 중...' : '시뮬레이션 실행' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 결과 표시 -->
+    <div v-if="relocationResult" class="space-y-6">
+      <!-- 현재 사업장 정보 -->
+      <div class="bg-white border border-gray-200 shadow-sm">
+        <div class="border-b border-gray-200 px-6 py-3 bg-gray-50">
+          <h3 class="text-sm text-gray-900">현재 사업장</h3>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-4 gap-4">
+            <div class="border border-gray-200 p-4">
+              <div class="text-xs text-gray-600 mb-1">위치</div>
+              <div class="text-sm text-gray-900">{{ relocationResult.currentSite.location }}</div>
+            </div>
+            <div class="border border-gray-200 p-4">
+              <div class="text-xs text-gray-600 mb-1">종합 리스크 점수</div>
+              <div class="text-lg text-gray-900">{{ relocationResult.currentSite.overallRiskScore.toFixed(1) }}</div>
+            </div>
+            <div class="border border-gray-200 p-4">
+              <div class="text-xs text-gray-600 mb-1">리스크 레벨</div>
+              <div
+                :class="getRiskLevelColor(relocationResult.currentSite.riskLevel)"
+                class="inline-block px-2 py-1 text-xs"
+              >
+                {{ getRiskLevelText(relocationResult.currentSite.riskLevel) }}
               </div>
+            </div>
+            <div class="border border-gray-200 p-4">
+              <div class="text-xs text-gray-600 mb-1">예상 비용</div>
+              <div class="text-lg text-gray-900">{{ relocationResult.currentSite.estimatedCost.toLocaleString() }}만원</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Risk Comparison -->
-      <div class="grid grid-cols-3 gap-4">
-        <div class="border border-gray-200 bg-white p-6">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-sm text-gray-700">종합 리스크 점수</span>
-          </div>
-          <div class="flex items-baseline gap-2 mb-2">
-            <span class="text-3xl text-gray-900">{{ simulationResult.riskScore }}</span>
-            <span class="text-sm text-gray-500">/ 100</span>
-          </div>
-          <div class="text-sm text-[#B3CF0A]">
-            현재 대비 {{ simulationResult.riskScore < currentRiskScore ? '-' : '+' }}{{
-              Math.abs(currentRiskScore - simulationResult.riskScore)
-            }} 개선
-          </div>
+      <!-- 최적 후보지 -->
+      <div class="bg-green-50 border border-green-200 shadow-sm">
+        <div class="border-b border-green-200 px-6 py-3 bg-green-100">
+          <h3 class="text-sm text-green-900">✅ 최적 후보지</h3>
         </div>
-
-        <div class="border border-gray-200 bg-white p-6">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-sm text-gray-700">연평균 손실 (AAL)</span>
+        <div class="p-6">
+          <div class="grid grid-cols-4 gap-4 mb-4">
+            <div class="border border-green-200 p-4 bg-white">
+              <div class="text-xs text-gray-600 mb-1">위치</div>
+              <div class="text-sm text-gray-900">{{ relocationResult.bestCandidate.location }}</div>
+            </div>
+            <div class="border border-green-200 p-4 bg-white">
+              <div class="text-xs text-gray-600 mb-1">종합 리스크 점수</div>
+              <div class="text-lg text-green-600 font-semibold">{{ relocationResult.bestCandidate.overallRiskScore.toFixed(1) }}</div>
+            </div>
+            <div class="border border-green-200 p-4 bg-white">
+              <div class="text-xs text-gray-600 mb-1">리스크 레벨</div>
+              <div
+                :class="getRiskLevelColor(relocationResult.bestCandidate.riskLevel)"
+                class="inline-block px-2 py-1 text-xs"
+              >
+                {{ getRiskLevelText(relocationResult.bestCandidate.riskLevel) }}
+              </div>
+            </div>
+            <div class="border border-green-200 p-4 bg-white">
+              <div class="text-xs text-gray-600 mb-1">예상 비용</div>
+              <div class="text-lg text-gray-900">{{ relocationResult.bestCandidate.estimatedCost.toLocaleString() }}만원</div>
+            </div>
           </div>
-          <div class="flex items-baseline gap-2 mb-2">
-            <span class="text-3xl text-gray-900">{{ simulationResult.aal.toLocaleString() }}</span>
-            <span class="text-sm text-gray-500">만원</span>
-          </div>
-          <div class="text-sm text-[#B3CF0A]">
-            현재 대비 -{{ Math.abs(currentAAL - simulationResult.aal).toLocaleString() }}만원 절감
-          </div>
-        </div>
-
-        <div class="border border-gray-200 bg-white p-6">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-sm text-gray-700">CVaR 손실</span>
-          </div>
-          <div class="flex items-baseline gap-2 mb-2">
-            <span class="text-3xl text-gray-900">{{ simulationResult.cvar }}</span>
-            <span class="text-sm text-gray-500">억원</span>
-          </div>
-          <div class="text-sm text-[#B3CF0A]">
-            현재 대비 -{{ Math.abs(currentCVaR - simulationResult.cvar) }}억원 개선
+          <div class="bg-white border border-green-200 p-4">
+            <div class="text-xs text-gray-600 mb-2">권장사항</div>
+            <div class="text-sm text-gray-900">{{ relocationResult.bestCandidate.recommendation }}</div>
           </div>
         </div>
       </div>
 
-      <!-- Detailed Risk Comparison Charts -->
-      <div class="grid grid-cols-2 gap-6">
-        <!-- Bar Chart -->
-        <div class="border border-gray-200 bg-white p-6">
-          <h4 class="text-gray-900 mb-4">기후 리스크 요소별 비교</h4>
-          <div class="h-80">
-            <Bar :data="barChartData" :options="barChartOptions" />
-          </div>
+      <!-- 전체 후보지 비교 -->
+      <div class="bg-white border border-gray-200 shadow-sm">
+        <div class="border-b border-gray-200 px-6 py-3 bg-gray-50">
+          <h3 class="text-sm text-gray-900">전체 후보지 비교</h3>
         </div>
-
-        <!-- Radar Chart -->
-        <div class="border border-gray-200 bg-white p-6">
-          <h4 class="text-gray-900 mb-4">종합 리스크 프로필리오</h4>
-          <div class="h-80">
-            <Radar :data="radarData" :options="radarChartOptions" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Pros and Cons -->
-      <div class="grid grid-cols-2 gap-6">
-        <div class="border border-green-300 bg-green-50 p-6">
-          <div class="flex items-center gap-2 mb-4">
-            <CheckCircle class="text-green-600" :size="20" />
-            <h4 class="text-gray-900">후보지 장점</h4>
-          </div>
-          <ul class="space-y-2">
-            <li
-              v-for="(adv, index) in simulationResult.advantages"
-              :key="index"
-              class="flex items-start gap-2 text-sm text-gray-700"
-            >
-              <span class="text-green-600 mt-1">•</span>
-              <span>{{ adv }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="border border-red-300 bg-red-50 p-6">
-          <div class="flex items-center gap-2 mb-4">
-            <XCircle class="text-red-600" :size="20" />
-            <h4 class="text-gray-900">후보지 단점</h4>
-          </div>
-          <ul class="space-y-2">
-            <li
-              v-for="(dis, index) in simulationResult.disadvantages"
-              :key="index"
-              class="flex items-start gap-2 text-sm text-gray-700"
-            >
-              <span class="text-red-600 mt-1">•</span>
-              <span>{{ dis }}</span>
-            </li>
-          </ul>
+        <div class="p-6">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200">
+                <th class="text-left text-xs text-gray-600 pb-3">위치</th>
+                <th class="text-left text-xs text-gray-600 pb-3">주소</th>
+                <th class="text-left text-xs text-gray-600 pb-3">종합 점수</th>
+                <th class="text-left text-xs text-gray-600 pb-3">리스크 레벨</th>
+                <th class="text-left text-xs text-gray-600 pb-3">예상 비용</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(candidate, index) in relocationResult.candidates"
+                :key="index"
+                class="border-b border-gray-100"
+              >
+                <td class="py-3 text-sm text-gray-900">{{ candidate.location }}</td>
+                <td class="py-3 text-sm text-gray-600">{{ candidate.address }}</td>
+                <td class="py-3 text-sm text-gray-900">{{ candidate.overallRiskScore.toFixed(1) }}</td>
+                <td class="py-3">
+                  <div
+                    :class="getRiskLevelColor(candidate.riskLevel)"
+                    class="inline-block px-2 py-1 text-xs"
+                  >
+                    {{ getRiskLevelText(candidate.riskLevel) }}
+                  </div>
+                </td>
+                <td class="py-3 text-sm text-gray-900">{{ candidate.estimatedCost.toLocaleString() }}만원</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-    </template>
+
+      <!-- 분석 요약 -->
+      <div v-if="relocationResult.analysis" class="bg-white border border-gray-200 shadow-sm">
+        <div class="border-b border-gray-200 px-6 py-3 bg-gray-50">
+          <h3 class="text-sm text-gray-900">분석 요약</h3>
+        </div>
+        <div class="p-6">
+          <div class="text-sm text-gray-900 whitespace-pre-line">{{ relocationResult.analysis }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 빈 상태 -->
+    <div v-else class="bg-white border border-gray-200 shadow-sm p-12 text-center">
+      <div class="text-gray-400 mb-2">
+        <Play :size="48" class="mx-auto" />
+      </div>
+      <div class="text-sm text-gray-600">시뮬레이션을 실행하여 결과를 확인하세요</div>
+    </div>
   </div>
 </template>
