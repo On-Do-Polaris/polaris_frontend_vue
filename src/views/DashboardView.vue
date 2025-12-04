@@ -1,70 +1,73 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Search, AlertTriangle } from 'lucide-vue-next';
-import { useSitesStore, type Site } from '@/store/sites';
-import { useUiStore } from '@/store/ui';
-import RiskHeatmap from '@/components/charts/RiskHeatmap.vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted } from 'vue'
+import { Search, AlertTriangle, Loader2 } from 'lucide-vue-next'
+import { useSitesStore, type Site } from '@/store/sites'
+import { useUiStore } from '@/store/ui'
+import RiskHeatmap from '@/components/charts/RiskHeatmap.vue'
+import { useRouter } from 'vue-router'
 
-const sitesStore = useSitesStore();
-const uiStore = useUiStore();
-const router = useRouter();
+const sitesStore = useSitesStore()
+const uiStore = useUiStore()
+const router = useRouter()
 
-const searchTerm = ref('');
+const searchTerm = ref('')
 
-const sites = computed(() => sitesStore.allSites);
+const sites = computed(() => sitesStore.allSites)
+const loading = computed(() => sitesStore.loading)
+const error = computed(() => sitesStore.error)
 
 const filteredSites = computed(() =>
   sites.value.filter(
     (site) =>
-      site.name.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+      site.siteName.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
       site.location.toLowerCase().includes(searchTerm.value.toLowerCase())
   )
-);
+)
 
 const lowRiskSites = computed(
-  () => sites.value.filter((s) => s.riskLevel === 'low').length
-);
+  () => sites.value.filter((s) => s.siteType === 'LOW_RISK').length
+)
 const highRiskSites = computed(
-  () => sites.value.filter((s) => s.riskLevel === 'high').length
-);
+  () => sites.value.filter((s) => s.siteType === 'HIGH_RISK').length
+)
 
-const getRiskColor = (level: string) => {
-  switch (level) {
-    case 'high':
-      return 'bg-red-600 text-white';
-    case 'medium':
-      return 'bg-yellow-500 text-white';
-    case 'low':
-      return 'bg-green-600 text-white';
-    default:
-      return 'bg-gray-600 text-white';
+const getRiskColor = (type: string) => {
+  // API 응답의 siteType을 기반으로 색상 결정
+  if (type.includes('HIGH') || type.includes('CRITICAL')) {
+    return 'bg-red-600 text-white'
+  } else if (type.includes('MEDIUM') || type.includes('MODERATE')) {
+    return 'bg-yellow-500 text-white'
+  } else if (type.includes('LOW')) {
+    return 'bg-green-600 text-white'
   }
-};
+  return 'bg-gray-600 text-white'
+}
 
-const getRiskLabel = (level: string) => {
-  switch (level) {
-    case 'high':
-      return '높음';
-    case 'medium':
-      return '보통';
-    case 'low':
-      return '낮음';
-    default:
-      return '-';
+const getRiskLabel = (type: string) => {
+  if (type.includes('HIGH') || type.includes('CRITICAL')) {
+    return '높음'
+  } else if (type.includes('MEDIUM') || type.includes('MODERATE')) {
+    return '보통'
+  } else if (type.includes('LOW')) {
+    return '낮음'
   }
-};
+  return type
+}
 
 const onViewAnalysis = (siteId: string) => {
-  uiStore.setSelectedSiteId(siteId);
-  router.push('/analysis');
-};
+  uiStore.setSelectedSiteId(siteId)
+  router.push('/analysis')
+}
 
 const onSelectSite = (site: Site) => {
-  uiStore.setSelectedSite(site);
-  uiStore.setSelectedSiteId(site.id);
-  router.push('/analysis');
-};
+  uiStore.setSelectedSiteId(site.siteId)
+  router.push('/analysis')
+}
+
+// 컴포넌트 마운트 시 사업장 목록 로드
+onMounted(() => {
+  sitesStore.fetchSites()
+})
 </script>
 
 <template>
@@ -77,7 +80,40 @@ const onSelectSite = (site: Site) => {
       </p>
     </div>
 
-    <div class="px-8 py-6">
+    <!-- 로딩 상태 -->
+    <div v-if="loading && sites.length === 0" class="px-8 py-20 text-center">
+      <Loader2 class="animate-spin text-[#EA002C] mx-auto mb-4" :size="48" />
+      <p class="text-gray-600">사업장 데이터를 불러오는 중입니다...</p>
+    </div>
+
+    <!-- 에러 상태 -->
+    <div v-else-if="error" class="px-8 py-20 text-center">
+      <AlertTriangle class="text-red-600 mx-auto mb-4" :size="48" />
+      <p class="text-gray-900 font-medium mb-2">데이터를 불러오는데 실패했습니다</p>
+      <p class="text-gray-600 mb-4">{{ error.message }}</p>
+      <button
+        @click="sitesStore.fetchSites()"
+        class="px-6 py-2.5 bg-[#EA002C] text-white hover:bg-[#C4002A] transition-colors"
+      >
+        다시 시도
+      </button>
+    </div>
+
+    <!-- 빈 상태 -->
+    <div v-else-if="!loading && sites.length === 0" class="px-8 py-20 text-center">
+      <AlertTriangle class="text-gray-400 mx-auto mb-4" :size="48" />
+      <p class="text-gray-900 font-medium mb-2">등록된 사업장이 없습니다</p>
+      <p class="text-gray-600 mb-4">사업장을 추가하여 리스크 분석을 시작하세요.</p>
+      <button
+        @click="router.push('/site-management')"
+        class="px-6 py-2.5 bg-[#EA002C] text-white hover:bg-[#C4002A] transition-colors"
+      >
+        사업장 추가하기
+      </button>
+    </div>
+
+    <!-- 데이터가 있을 때 -->
+    <div v-else class="px-8 py-6">
       <!-- 사업장 현황 Section -->
       <div class="bg-white border border-gray-200 mb-6 shadow-sm">
         <div class="border-b border-gray-200 px-6 py-3">
@@ -144,7 +180,7 @@ const onSelectSite = (site: Site) => {
       </div>
 
       <!-- Risk Heatmap Section -->
-      <div class="bg-white border border-gray-200 shadow-sm">
+      <div class="bg-white border border-gray-200 shadow-sm mb-6">
         <div class="border-b border-gray-200 px-6 py-3 bg-gray-50">
           <h3 class="text-sm text-gray-900">리스크 히트맵</h3>
         </div>
@@ -198,66 +234,35 @@ const onSelectSite = (site: Site) => {
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-gray-200">
-                <th
-                  class="px-6 py-4 text-left text-xs text-gray-600 bg-gray-50"
-                >
-                  사업장 명
-                </th>
-                <th
-                  class="px-6 py-4 text-left text-xs text-gray-600 bg-gray-50"
-                >
-                  위치
-                </th>
-                <th
-                  class="px-6 py-4 text-left text-xs text-gray-600 bg-gray-50"
-                >
-                  리스크 수준
-                </th>
-                <th
-                  class="px-6 py-4 text-left text-xs text-gray-600 bg-gray-50"
-                >
-                  담당 기관
-                </th>
-                <th
-                  class="px-6 py-4 text-right text-xs text-gray-600 bg-gray-50"
-                >
-                  리스크 점수
-                </th>
-                <th
-                  class="px-6 py-4 text-center text-xs text-gray-600 bg-gray-50"
-                >
-                  상세
-                </th>
+                <th class="px-6 py-4 text-left text-xs text-gray-600 bg-gray-50">사업장 명</th>
+                <th class="px-6 py-4 text-left text-xs text-gray-600 bg-gray-50">위치</th>
+                <th class="px-6 py-4 text-left text-xs text-gray-600 bg-gray-50">리스크 수준</th>
+                <th class="px-6 py-4 text-left text-xs text-gray-600 bg-gray-50">유형</th>
+                <th class="px-6 py-4 text-center text-xs text-gray-600 bg-gray-50">상세</th>
               </tr>
             </thead>
             <tbody class="bg-white">
               <tr
                 v-for="(site, index) in filteredSites"
-                :key="site.id"
+                :key="site.siteId"
                 :class="[
                   'border-b border-gray-100 hover:bg-gray-50 transition-colors',
-                  index === filteredSites.length - 1 ? 'border-b-0' : '',
+                  index === filteredSites.length - 1 ? 'border-b-0' : ''
                 ]"
               >
-                <td class="px-6 py-4 text-gray-900">{{ site.name }}</td>
+                <td class="px-6 py-4 text-gray-900">{{ site.siteName }}</td>
                 <td class="px-6 py-4 text-gray-600">{{ site.location }}</td>
                 <td class="px-6 py-4">
                   <span
-                    :class="`inline-block px-3 py-1 text-xs ${getRiskColor(
-                      site.riskLevel
-                    )}`"
+                    :class="`inline-block px-3 py-1 text-xs ${getRiskColor(site.siteType)}`"
                   >
-                    {{ getRiskLabel(site.riskLevel) }}
+                    {{ getRiskLabel(site.siteType) }}
                   </span>
                 </td>
-                <td class="px-6 py-4 text-gray-600">{{ site.type }}</td>
-                <td class="px-6 py-4 text-right">
-                  <span class="text-gray-900">{{ site.esgScore }}</span>
-                  <span class="text-gray-500 text-xs ml-0.5">점</span>
-                </td>
+                <td class="px-6 py-4 text-gray-600">{{ site.siteType }}</td>
                 <td class="px-6 py-4 text-center">
                   <button
-                    @click="onViewAnalysis(site.id)"
+                    @click="onViewAnalysis(site.siteId)"
                     class="inline-flex items-center justify-center px-5 py-2 text-xs bg-[#EA002C] text-white hover:bg-[#C4002A] transition-colors"
                   >
                     상세보기

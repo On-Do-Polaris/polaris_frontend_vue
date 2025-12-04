@@ -1,39 +1,45 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { ArrowLeft, MapPin, Building2, Download, AlertTriangle, TrendingDown, Leaf } from 'lucide-vue-next';
-import { useSitesStore } from '@/store/sites';
-import { useUiStore } from '@/store/ui';
-import { useRouter } from 'vue-router';
-import RiskChart from '@/components/charts/RiskChart.vue';
-import EmissionChart from '@/components/charts/EmissionChart.vue';
-import ESGRadar from '@/components/charts/ESGRadar.vue';
-import HistoricalDisasters from '@/components/charts/HistoricalDisasters.vue';
-import TCFDScenario from '@/components/simulation/TCFDScenario.vue';
-import FinancialImpact from '@/components/simulation/FinancialImpact.vue';
-import AssetVulnerability from '@/components/simulation/AssetVulnerability.vue';
-import LocationSimulation from '@/components/simulation/LocationSimulation.vue';
+import { ref, computed, onMounted } from 'vue'
+import { ArrowLeft, MapPin, Building2, Download } from 'lucide-vue-next'
+import { useSitesStore } from '@/store/sites'
+import { useUiStore } from '@/store/ui'
+import { useRouter } from 'vue-router'
+import HistoricalDisasters from '@/components/charts/HistoricalDisasters.vue'
+import TCFDScenario from '@/components/simulation/TCFDScenario.vue'
+import FinancialImpact from '@/components/simulation/FinancialImpact.vue'
+import AssetVulnerability from '@/components/simulation/AssetVulnerability.vue'
+import LocationSimulation from '@/components/simulation/LocationSimulation.vue'
 
-const sitesStore = useSitesStore();
-const uiStore = useUiStore();
-const router = useRouter();
+const sitesStore = useSitesStore()
+const uiStore = useUiStore()
+const router = useRouter()
+
+// 컴포넌트 마운트 시 사업장 목록 로드
+onMounted(() => {
+  if (sitesStore.allSites.length === 0) {
+    sitesStore.fetchSites()
+  }
+})
 
 const currentSite = computed(() => {
-  const selectedId = uiStore.selectedSiteId;
+  const selectedId = uiStore.selectedSiteId
   if (selectedId) {
-    return sitesStore.allSites.find((s) => s.id === selectedId) || uiStore.selectedSite;
+    return sitesStore.allSites.find((s) => s.siteId === selectedId) || uiStore.selectedSite
   }
-  return uiStore.selectedSite;
-});
+  return uiStore.selectedSite
+})
 
-const activeTab = ref<'overview' | 'history' | 'scenario' | 'financial' | 'vulnerability' | 'simulation'>('overview');
+const activeTab = ref<
+  'overview' | 'history' | 'scenario' | 'financial' | 'vulnerability' | 'simulation'
+>('overview')
 
 const onBack = () => {
-  router.back();
-};
+  router.back()
+}
 
 const goToDashboard = () => {
-  router.push('/');
-};
+  router.push('/')
+}
 </script>
 
 <template>
@@ -63,7 +69,7 @@ const goToDashboard = () => {
       <div class="bg-white border-l-4 border-l-[#dc042b] p-6 mb-6">
         <div class="flex items-start justify-between">
           <div>
-            <h2 class="text-gray-900 mb-4">{{ currentSite.name }}</h2>
+            <h2 class="text-gray-900 mb-4">{{ currentSite.siteName }}</h2>
             <div class="flex items-center gap-6 text-gray-600">
               <div class="flex items-center gap-2">
                 <MapPin :size="16" />
@@ -71,28 +77,14 @@ const goToDashboard = () => {
               </div>
               <div class="flex items-center gap-2">
                 <Building2 :size="16" />
-                <span>{{ currentSite.type }}</span>
+                <span>{{ currentSite.siteType }}</span>
               </div>
             </div>
           </div>
           <div class="text-right">
-            <div class="text-sm text-gray-600 mb-1">종합 리스크 수준</div>
-            <div
-              :class="`inline-block px-4 py-2 border ${
-                currentSite.riskLevel === 'high'
-                  ? 'bg-red-100 text-red-700 border-red-300'
-                  : currentSite.riskLevel === 'medium'
-                  ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
-                  : 'bg-green-100 text-green-700 border-green-300'
-              }`"
-            >
-              {{
-                currentSite.riskLevel === 'high'
-                  ? '높음'
-                  : currentSite.riskLevel === 'medium'
-                  ? '보통'
-                  : '낮음'
-              }}
+            <div class="text-sm text-gray-600 mb-1">사업장 유형</div>
+            <div class="inline-block px-4 py-2 border bg-gray-100 text-gray-700 border-gray-300">
+              {{ currentSite.siteType }}
             </div>
           </div>
         </div>
