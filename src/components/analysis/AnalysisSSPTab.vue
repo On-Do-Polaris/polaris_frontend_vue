@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed } from 'vue'
 import { Line } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -21,7 +21,12 @@ ChartJS.register(
   PointElement,
   CategoryScale,
   LinearScale
-);
+)
+
+// props 추가 (향후 API 연동을 위해)
+defineProps<{
+  siteId: string
+}>()
 
 type Period = '단기' | '중기' | '장기';
 type RiskFactor =
