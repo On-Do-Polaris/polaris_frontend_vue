@@ -1,113 +1,130 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Building2, Trash2, Save, Search, X } from 'lucide-vue-next';
-import { useSitesStore, type Site } from '@/store/sites';
-import { toast } from 'vue-sonner';
+import { ref, computed, onMounted } from 'vue'
+import { Building2, Trash2, Save, Search, X, Loader2 } from 'lucide-vue-next'
+import { useSitesStore, type Site } from '@/store/sites'
+import { toast } from 'vue-sonner'
+import type { CreateSiteRequest, UpdateSiteRequest } from '@/api/types'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  DialogTitle
+} from '@/components/ui/dialog'
 
-const sitesStore = useSitesStore();
-const sites = ref([...sitesStore.allSites]);
-const editingSiteId = ref<string | null>(null);
-const editFormData = ref<Partial<Site>>({});
+const sitesStore = useSitesStore()
+const sites = computed(() => sitesStore.allSites)
+const loading = computed(() => sitesStore.loading)
+const error = computed(() => sitesStore.error)
+
+const editingSiteId = ref<string | null>(null)
+const editFormData = ref<{
+  name?: string
+  location?: string
+  address?: string
+  type?: string
+}>({})
 const deleteConfirmDialog = ref<{ open: boolean; siteId: string | null }>({
   open: false,
-  siteId: null,
-});
+  siteId: null
+})
 
 const newSite = ref({
   name: '',
   location: '',
   address: '',
-  type: '',
-});
+  type: ''
+})
 
-const handleDelete = (id: string) => {
-  deleteConfirmDialog.value = { open: true, siteId: id };
-};
+// 컴포넌트 마운트 시 사업장 목록 로드
+onMounted(() => {
+  sitesStore.fetchSites()
+})
 
-const confirmDelete = () => {
+const handleDelete = (siteId: string) => {
+  deleteConfirmDialog.value = { open: true, siteId }
+}
+
+const confirmDelete = async () => {
   if (deleteConfirmDialog.value.siteId) {
-    sites.value = sites.value.filter(
-      (site) => site.id !== deleteConfirmDialog.value.siteId
-    );
-    toast.success('사업장이 삭제되었습니다.');
+    try {
+      await sitesStore.deleteSite(deleteConfirmDialog.value.siteId)
+    } catch (err) {
+      // 에러는 store에서 처리됨
+      console.error('삭제 실패:', err)
+    }
   }
-  deleteConfirmDialog.value = { open: false, siteId: null };
-};
+  deleteConfirmDialog.value = { open: false, siteId: null }
+}
 
 const handleEdit = (site: Site) => {
-  editingSiteId.value = site.id;
-  editFormData.value = { ...site };
-};
+  editingSiteId.value = site.siteId
+  editFormData.value = {
+    name: site.siteName,
+    location: site.location,
+    address: site.location, // API 응답에 address가 없으므로 location 사용
+    type: site.siteType
+  }
+}
 
 const handleCancelEdit = () => {
-  editingSiteId.value = null;
-  editFormData.value = {};
-};
+  editingSiteId.value = null
+  editFormData.value = {}
+}
 
-const handleSaveEdit = () => {
-  if (!editingSiteId.value) return;
+const handleSaveEdit = async () => {
+  if (!editingSiteId.value) return
 
-  sites.value = sites.value.map((site) =>
-    site.id === editingSiteId.value
-      ? ({ ...site, ...editFormData.value } as Site)
-      : site
-  );
-  editingSiteId.value = null;
-  editFormData.value = {};
-  toast.success('사업장 정보가 수정되었습니다.');
-};
-
-const handleAddSite = () => {
-  if (
-    !newSite.value.name ||
-    !newSite.value.location ||
-    !newSite.value.address ||
-    !newSite.value.type
-  ) {
-    toast.error('필수 항목을 모두 입력해주세요.');
-    return;
+  // 폼 입력 검증
+  if (!editFormData.value.name || !editFormData.value.location || !editFormData.value.type) {
+    toast.error('필수 항목을 모두 입력해주세요.')
+    return
   }
 
-  const maxId =
-    sites.value.length > 0
-      ? Math.max(...sites.value.map((s) => parseInt(s.id) || 0))
-      : 0;
-  const newId = (maxId + 1).toString();
+  try {
+    const updateData: UpdateSiteRequest = {
+      name: editFormData.value.name,
+      location: editFormData.value.location,
+      address: editFormData.value.address,
+      type: editFormData.value.type
+    }
+    await sitesStore.updateSite(editingSiteId.value, updateData)
+    editingSiteId.value = null
+    editFormData.value = {}
+  } catch (err) {
+    // 에러는 store에서 처리됨
+    console.error('수정 실패:', err)
+  }
+}
 
-  const site: Site = {
-    id: newId,
-    name: newSite.value.name,
-    location: newSite.value.location,
-    address: newSite.value.address,
-    type: newSite.value.type,
-    assetType: '업무시설',
-    constructionYear: new Date().getFullYear(),
-    buildingStructure: '철근콘크리트',
-    latitude: '37.5',
-    longitude: '127.0',
-    coordinates: { lat: 37.5, lng: 127.0 },
-    riskLevel: 'low',
-    carbonEmission: 0,
-    esgScore: 0,
-  };
+const handleAddSite = async () => {
+  // 폼 입력 검증
+  if (!newSite.value.name || !newSite.value.location || !newSite.value.type) {
+    toast.error('필수 항목을 모두 입력해주세요.')
+    return
+  }
 
-  sites.value = [...sites.value, site];
-  newSite.value = {
-    name: '',
-    location: '',
-    address: '',
-    type: '',
-  };
-  toast.success('새 사업장이 추가되었습니다.');
-};
+  try {
+    const createData: CreateSiteRequest = {
+      name: newSite.value.name,
+      location: newSite.value.location,
+      address: newSite.value.address || newSite.value.location,
+      type: newSite.value.type
+    }
+    await sitesStore.createSite(createData)
+    // 폼 초기화
+    newSite.value = {
+      name: '',
+      location: '',
+      address: '',
+      type: ''
+    }
+  } catch (err) {
+    // 에러는 store에서 처리됨
+    console.error('생성 실패:', err)
+  }
+}
 </script>
 
 <template>
@@ -126,7 +143,30 @@ const handleAddSite = () => {
       <div class="w-1/2 border-r border-gray-200 p-8 bg-white">
         <div>
           <h3 class="text-gray-800 mb-4">등록된 사업장</h3>
-          <div v-if="sites.length === 0" class="flex flex-col items-center justify-center py-16 text-center">
+
+          <!-- 로딩 상태 -->
+          <div v-if="loading && sites.length === 0" class="flex flex-col items-center justify-center py-16 text-center">
+            <Loader2 class="animate-spin text-[#EA002C] mb-4" :size="40" />
+            <p class="text-gray-500">사업장 목록을 불러오는 중입니다...</p>
+          </div>
+
+          <!-- 에러 상태 -->
+          <div v-else-if="error" class="flex flex-col items-center justify-center py-16 text-center">
+            <div class="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-4">
+              <X :size="40" class="text-red-600" />
+            </div>
+            <p class="text-gray-900 font-medium mb-2">데이터를 불러오는데 실패했습니다</p>
+            <p class="text-sm text-gray-500 mb-4">{{ error.message }}</p>
+            <button
+              @click="sitesStore.fetchSites()"
+              class="px-6 py-2.5 bg-[#EA002C] text-white hover:bg-[#C4002A] transition-colors"
+            >
+              다시 시도
+            </button>
+          </div>
+
+          <!-- 빈 상태 -->
+          <div v-else-if="!loading && sites.length === 0" class="flex flex-col items-center justify-center py-16 text-center">
             <div class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
               <Building2 :size="40" class="text-gray-400" />
             </div>
@@ -136,8 +176,8 @@ const handleAddSite = () => {
             </p>
           </div>
           <div v-else class="space-y-3">
-            <div v-for="site in sites" :key="site.id" class="p-4 bg-white border border-gray-200 shadow-sm group relative">
-              <div v-if="editingSiteId === site.id" class="space-y-3">
+            <div v-for="site in sites" :key="site.siteId" class="p-4 bg-white border border-gray-200 shadow-sm group relative">
+              <div v-if="editingSiteId === site.siteId" class="space-y-3">
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">사업장명 *</label>
                   <input
@@ -189,21 +229,21 @@ const handleAddSite = () => {
               </div>
               <div v-else>
                 <button
-                  @click="handleDelete(site.id)"
+                  @click="handleDelete(site.siteId)"
                   class="absolute top-2 right-2 p-1 text-gray-400 hover:text-[#EA002C] hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
                 >
                   <Trash2 :size="16" />
                 </button>
                 <div class="flex items-center gap-2 mb-2">
                   <Building2 :size="18" class="text-[#EA002C]" />
-                  <span class="text-gray-900">{{ site.name }}</span>
+                  <span class="text-gray-900">{{ site.siteName }}</span>
                 </div>
                 <div class="text-sm text-gray-500 mb-2">
-                  {{ site.address }}
+                  {{ site.location }}
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-xs px-2 py-1 bg-gray-100 text-gray-700">{{
-                    site.type
+                    site.siteType
                   }}</span>
                   <button
                     @click="handleEdit(site)"
@@ -287,10 +327,11 @@ const handleAddSite = () => {
               <div class="pt-4">
                 <button
                   type="submit"
-                  :disabled="!newSite.name || !newSite.location || !newSite.address || !newSite.type"
-                  class="w-full bg-[#EA002C] text-white py-2.5 hover:bg-[#C4002A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-center"
+                  :disabled="!newSite.name || !newSite.location || !newSite.type || loading"
+                  class="w-full bg-[#EA002C] text-white py-2.5 hover:bg-[#C4002A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-center flex items-center justify-center gap-2"
                 >
-                  사업장 추가
+                  <Loader2 v-if="loading" class="animate-spin" :size="18" />
+                  <span>{{ loading ? '처리 중...' : '사업장 추가' }}</span>
                 </button>
               </div>
             </form>
