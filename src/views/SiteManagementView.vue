@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Building2, Trash2, Save, Search, X, Loader2 } from 'lucide-vue-next'
 import { useSitesStore, type Site } from '@/store/sites'
+import { useMeta } from '@/composables/useMeta'
 import { toast } from 'vue-sonner'
 import type { CreateSiteRequest, UpdateSiteRequest } from '@/api/types'
 import {
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 
 const sitesStore = useSitesStore()
+const { industries, fetchIndustries } = useMeta()
 const sites = computed(() => sitesStore.allSites)
 const loading = computed(() => sitesStore.loading)
 const error = computed(() => sitesStore.error)
@@ -37,9 +39,10 @@ const newSite = ref({
   type: ''
 })
 
-// 컴포넌트 마운트 시 사업장 목록 로드
-onMounted(() => {
-  sitesStore.fetchSites()
+// 컴포넌트 마운트 시 사업장 목록 및 산업 분류 로드
+onMounted(async () => {
+  await sitesStore.fetchSites()
+  await fetchIndustries()
 })
 
 const handleDelete = (siteId: string) => {
@@ -203,12 +206,16 @@ const handleAddSite = async () => {
                   />
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">유형 *</label>
-                  <input
-                    type="text"
+                  <label class="block text-xs text-gray-600 mb-1">산업 분류 *</label>
+                  <select
                     v-model="editFormData.type"
-                    class="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#EA002C]"
-                  />
+                    class="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#EA002C] bg-white"
+                  >
+                    <option value="">산업 분류 선택</option>
+                    <option v-for="industry in industries" :key="industry.id" :value="industry.code">
+                      {{ industry.name }}
+                    </option>
+                  </select>
                 </div>
                 <div class="flex gap-2 pt-2">
                   <button
@@ -313,15 +320,18 @@ const handleAddSite = async () => {
 
               <div>
                 <label class="block text-sm mb-2 text-gray-700">
-                  유형 <span class="text-[#EA002C]">*</span>
+                  산업 분류 <span class="text-[#EA002C]">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   v-model="newSite.type"
-                  class="w-full px-4 py-2.5 border border-gray-300 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] transition-colors"
-                  placeholder="예: 물류"
+                  class="w-full px-4 py-2.5 border border-gray-300 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] transition-colors bg-white"
                   required
-                />
+                >
+                  <option value="">산업 분류를 선택하세요</option>
+                  <option v-for="industry in industries" :key="industry.id" :value="industry.code">
+                    {{ industry.name }} ({{ industry.category }})
+                  </option>
+                </select>
               </div>
 
               <div class="pt-4">
