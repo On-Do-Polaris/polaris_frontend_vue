@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Play, Loader2 } from 'lucide-vue-next'
 import { useSimulation } from '@/composables/useSimulation'
+import { useMeta } from '@/composables/useMeta'
 import { toast } from 'vue-sonner'
 import type { Site } from '@/api/types'
 
@@ -16,27 +17,20 @@ const emit = defineEmits<{
 }>()
 
 const { runClimateSimulation, climateResult, loading } = useSimulation()
+const { hazardTypes, fetchHazardTypes } = useMeta()
 
 const sspScenario = ref<'SSP1-2.6' | 'SSP2-4.5' | 'SSP5-8.5'>('SSP5-8.5')
 const selectedYear = ref(2050)
 const selectedHazardTypes = ref<string[]>([])
 const isRunning = ref(false)
 
+// 컴포넌트 마운트 시 위험 유형 로드
+onMounted(async () => {
+  await fetchHazardTypes()
+})
+
 // 연도 옵션 (2025-2100, 5년 단위)
 const years = Array.from({ length: 16 }, (_, i) => 2025 + i * 5)
-
-// 위험 유형 옵션
-const hazardTypeOptions = [
-  { value: 'FLOOD', label: '홍수' },
-  { value: 'TYPHOON', label: '태풍' },
-  { value: 'HEATWAVE', label: '폭염' },
-  { value: 'COLD_WAVE', label: '한파' },
-  { value: 'EARTHQUAKE', label: '지진' },
-  { value: 'LANDSLIDE', label: '산사태' },
-  { value: 'HEAVY_SNOW', label: '폭설' },
-  { value: 'DROUGHT', label: '가뭄' },
-  { value: 'SEA_LEVEL_RISE', label: '해수면상승' }
-]
 
 // 시뮬레이션 실행
 const handleRunSimulation = async () => {
@@ -143,17 +137,17 @@ const getTemperatureColor = (change: number) => {
           <label class="block text-xs text-gray-600 mb-2">위험 유형 (선택사항)</label>
           <div class="flex flex-wrap gap-2">
             <label
-              v-for="hazard in hazardTypeOptions"
-              :key="hazard.value"
+              v-for="hazard in hazardTypes"
+              :key="hazard.id"
               class="flex items-center gap-2 cursor-pointer"
             >
               <input
                 type="checkbox"
-                :value="hazard.value"
+                :value="hazard.code"
                 v-model="selectedHazardTypes"
                 class="rounded border-gray-300 text-[#EA002C] focus:ring-[#EA002C]"
               />
-              <span class="text-sm text-gray-700">{{ hazard.label }}</span>
+              <span class="text-sm text-gray-700">{{ hazard.name }}</span>
             </label>
           </div>
         </div>
