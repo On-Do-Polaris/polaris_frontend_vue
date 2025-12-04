@@ -3,12 +3,14 @@ import { ref, computed, onMounted } from 'vue'
 import { Search, AlertTriangle, Loader2 } from 'lucide-vue-next'
 import { useSitesStore, type Site } from '@/store/sites'
 import { useUiStore } from '@/store/ui'
+import { useDashboard } from '@/composables/useDashboard'
 import RiskHeatmap from '@/components/charts/RiskHeatmap.vue'
 import { useRouter } from 'vue-router'
 
 const sitesStore = useSitesStore()
 const uiStore = useUiStore()
 const router = useRouter()
+const { summary, loading: dashboardLoading, error: dashboardError, fetchSummary } = useDashboard()
 
 const searchTerm = ref('')
 
@@ -24,12 +26,11 @@ const filteredSites = computed(() =>
   )
 )
 
-const lowRiskSites = computed(
-  () => sites.value.filter((s) => s.siteType === 'LOW_RISK').length
-)
-const highRiskSites = computed(
-  () => sites.value.filter((s) => s.siteType === 'HIGH_RISK').length
-)
+// API에서 가져온 대시보드 요약 정보 또는 폴백
+const totalSites = computed(() => summary.value?.totalSites ?? sites.value.length)
+const analyzedSites = computed(() => summary.value?.analyzedSites ?? 0)
+const highRiskSites = computed(() => summary.value?.highRiskSites ?? 0)
+const recentAnalysisCount = computed(() => summary.value?.recentAnalysisCount ?? 0)
 
 const getRiskColor = (type: string) => {
   // API 응답의 siteType을 기반으로 색상 결정
@@ -64,9 +65,10 @@ const onSelectSite = (site: Site) => {
   router.push('/analysis')
 }
 
-// 컴포넌트 마운트 시 사업장 목록 로드
-onMounted(() => {
+// 컴포넌트 마운트 시 사업장 목록 및 대시보드 요약 정보 로드
+onMounted(async () => {
   sitesStore.fetchSites()
+  await fetchSummary()
 })
 </script>
 
@@ -123,12 +125,12 @@ onMounted(() => {
           <div class="grid grid-cols-4 gap-4">
             <div class="border border-gray-200 p-5">
               <div class="text-xs text-gray-500 mb-2">총 사업장</div>
-              <div class="text-2xl text-gray-900">{{ sites.length }}</div>
+              <div class="text-2xl text-gray-900">{{ totalSites }}</div>
             </div>
 
             <div class="border border-gray-200 p-5">
-              <div class="text-xs text-gray-500 mb-2">안전 사업장</div>
-              <div class="text-2xl text-green-600">{{ lowRiskSites }}</div>
+              <div class="text-xs text-gray-500 mb-2">분석된 사업장</div>
+              <div class="text-2xl text-green-600">{{ analyzedSites }}</div>
             </div>
 
             <div class="border border-gray-200 p-5">
@@ -139,8 +141,8 @@ onMounted(() => {
             <div class="border border-gray-200 p-5">
               <div class="flex items-center justify-between">
                 <div>
-                  <div class="text-xs text-gray-500 mb-2">주요 기후 리스크</div>
-                  <div class="text-2xl text-gray-900">폭염</div>
+                  <div class="text-xs text-gray-500 mb-2">최근 분석 수</div>
+                  <div class="text-2xl text-gray-900">{{ recentAnalysisCount }}</div>
                 </div>
                 <div class="text-[#F47725]">
                   <AlertTriangle :size="24" />
