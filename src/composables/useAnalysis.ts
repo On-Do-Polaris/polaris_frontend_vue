@@ -1,4 +1,4 @@
-import { ref, Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { analysisAPI } from '@/api'
 import type {
   StartAnalysisRequest,
@@ -20,7 +20,7 @@ export function useAnalysis(siteId: string) {
   const vulnerability: Ref<VulnerabilityResponse | null> = ref(null)
   const totalAnalysis: Ref<AnalysisTotalResponse | null> = ref(null)
 
-  let pollingInterval: NodeJS.Timeout | null = null
+  let pollingInterval: ReturnType<typeof setTimeout> | null = null
 
   /**
    * 분석 시작
