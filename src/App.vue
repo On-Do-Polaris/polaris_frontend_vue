@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterView, useRouter } from 'vue-router'
+import { RouterView, useRouter, useRoute } from 'vue-router'
 import { Toaster } from 'vue-sonner'
 import Header from '@/components/common/Header.vue'
 import OnboardingModal from '@/components/common/OnboardingModal.vue'
@@ -10,6 +10,7 @@ import { useUiStore } from './store/ui'
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const router = useRouter()
+const route = useRoute()
 
 const shouldShowOnboarding = computed(() => authStore.isFirstLogin && uiStore.showOnboarding)
 
@@ -40,7 +41,11 @@ const handleOnboardingClose = () => {
   <div v-if="authStore.isLoggedIn" class="h-screen flex flex-col bg-gray-50">
     <Header />
     <div class="flex-1 overflow-y-auto">
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition name="fade" mode="out-in">
+          <component :is="Component" :key="route.path" />
+        </Transition>
+      </RouterView>
     </div>
   </div>
   <div v-else>
@@ -79,6 +84,23 @@ const handleOnboardingClose = () => {
   border-radius: 8px !important;
   padding: 16px !important;
   margin: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  flex-shrink: 0 !important;
+}
+
+[data-sonner-toast] [data-content] {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+[data-sonner-toast] [data-title] {
+  margin: 0 !important;
 }
 
 [data-sonner-toast][data-type='success'] {
@@ -91,5 +113,16 @@ const handleOnboardingClose = () => {
 
 [data-sonner-toast][data-type='info'] {
   border-left: 4px solid #f47725 !important;
+}
+
+/* Page transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

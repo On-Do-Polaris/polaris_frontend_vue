@@ -33,8 +33,13 @@ apiClient.interceptors.response.use(
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
-    // 401 Unauthorized 에러이고, 재시도하지 않은 경우
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 로그인, 회원가입, 토큰 갱신 요청은 토큰 갱신을 시도하지 않음
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
+                           originalRequest.url?.includes('/auth/register') ||
+                           originalRequest.url?.includes('/auth/refresh')
+
+    // 401 Unauthorized 에러이고, 재시도하지 않은 경우, 그리고 인증 엔드포인트가 아닌 경우
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
 
       try {

@@ -10,6 +10,8 @@ import AnalysisSSPTab from '@/components/analysis/AnalysisSSPTab.vue'
 import AnalysisFinancialTab from '@/components/analysis/AnalysisFinancialTab.vue'
 import AnalysisVulnerabilityTab from '@/components/analysis/AnalysisVulnerabilityTab.vue'
 
+console.log('[AnalysisView] Component loaded')
+
 const sitesStore = useSitesStore()
 const uiStore = useUiStore()
 const router = useRouter()

@@ -5,6 +5,8 @@ import { useSitesStore } from '@/store/sites'
 import { useReports } from '@/composables/useReports'
 import { toast } from 'vue-sonner'
 
+console.log('[ReportView] Component loaded')
+
 const sitesStore = useSitesStore()
 const reports = useReports()
 

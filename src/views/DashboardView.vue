@@ -7,6 +7,8 @@ import { useDashboard } from '@/composables/useDashboard'
 import RiskHeatmap from '@/components/charts/RiskHeatmap.vue'
 import { useRouter } from 'vue-router'
 
+console.log('[DashboardView] Component loaded')
+
 const sitesStore = useSitesStore()
 const uiStore = useUiStore()
 const router = useRouter()

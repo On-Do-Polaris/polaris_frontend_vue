@@ -14,6 +14,8 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 
+console.log('[SiteManagementView] Component loaded')
+
 const sitesStore = useSitesStore()
 const { industries, fetchIndustries } = useMeta()
 const sites = computed(() => sitesStore.allSites)

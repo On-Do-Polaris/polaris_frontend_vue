@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { MapPin } from 'lucide-vue-next';
 import type { Site } from '@/store/sites';
 
@@ -8,6 +9,28 @@ interface RiskHeatmapProps {
 
 const props = defineProps<RiskHeatmapProps>();
 const emit = defineEmits(['select-site']);
+
+// 임시 좌표 생성 함수 (실제로는 Geocoding API를 통해 받아야 함)
+const getCoordinates = (site: Site, index: number) => {
+  // 임시로 한국 중심부 근처에 분산된 좌표 생성
+  const baseLatitude = 36.5 + (Math.sin(index * 0.7) * 2);
+  const baseLongitude = 127.5 + (Math.cos(index * 0.7) * 2);
+
+  return {
+    lat: baseLatitude,
+    lng: baseLongitude
+  };
+};
+
+// 좌표를 포함한 사이트 목록 생성
+const sitesWithCoordinates = computed(() =>
+  props.sites.map((site, index) => ({
+    ...site,
+    coordinates: getCoordinates(site, index),
+    name: (site as any).siteName || (site as any).name || 'Unknown',
+    riskLevel: 'medium' as 'high' | 'medium' | 'low'
+  }))
+);
 
 const getRiskColor = (level: string) => {
   switch (level) {
@@ -35,7 +58,7 @@ const getRiskSize = (level: string) => {
   }
 };
 
-const selectSite = (site: Site) => {
+const selectSite = (site: any) => {
   emit('select-site', site);
 };
 </script>
@@ -62,8 +85,8 @@ const selectSite = (site: Site) => {
 
       <!-- Site Markers -->
       <g
-        v-for="site in sites"
-        :key="site.id"
+        v-for="(site, index) in sitesWithCoordinates"
+        :key="site.siteId || index"
         @click="selectSite(site)"
         class="cursor-pointer hover:opacity-80"
       >

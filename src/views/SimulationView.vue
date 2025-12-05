@@ -5,6 +5,8 @@ import { useSitesStore } from '@/store/sites'
 import ClimateSimulation from '@/components/simulation/ClimateSimulation.vue'
 import LocationSimulation from '@/components/simulation/LocationSimulation.vue'
 
+console.log('[SimulationView] Component loaded')
+
 type SimulationType = 'location' | 'climate'
 
 const sitesStore = useSitesStore()

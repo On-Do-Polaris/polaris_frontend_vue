@@ -27,6 +27,8 @@ const handleSubmit = async () => {
   } catch (error) {
     // 에러는 authStore에서 이미 toast로 표시됨
     console.error('로그인 실패:', error)
+    // 비밀번호 입력 칸 비우기
+    password.value = ''
   } finally {
     loading.value = false
   }
