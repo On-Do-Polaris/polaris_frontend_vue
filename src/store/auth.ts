@@ -3,13 +3,30 @@ import { ref, computed } from 'vue'
 import { authAPI, userAPI } from '@/api'
 import type { LoginRequest, RegisterRequest } from '@/api/types'
 import { toast } from 'vue-sonner'
+import { handleApiError } from '@/utils/errorHandler'
+import { TokenManager } from '@/utils/tokenManager'
 
 export const useAuthStore = defineStore('auth', () => {
-  // State
-  const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
-  const refreshToken = ref<string | null>(localStorage.getItem('refreshToken'))
-  const userId = ref<string | null>(localStorage.getItem('userId'))
-  const userName = ref<string | null>(localStorage.getItem('userName'))
+  // State (TokenManager에서 초기화) - 안전한 초기화
+  let userInfo: { userId: string | null; userName: string | null } = {
+    userId: null,
+    userName: null,
+  }
+  let initialAccessToken: string | null = null
+  let initialRefreshToken: string | null = null
+
+  try {
+    userInfo = TokenManager.getUserInfo()
+    initialAccessToken = TokenManager.getAccessToken()
+    initialRefreshToken = TokenManager.getRefreshToken()
+  } catch (error) {
+    console.error('[AuthStore] Initialization error:', error)
+  }
+
+  const accessToken = ref<string | null>(initialAccessToken)
+  const refreshToken = ref<string | null>(initialRefreshToken)
+  const userId = ref<string | null>(userInfo.userId)
+  const userName = ref<string | null>(userInfo.userName)
   const isFirstLogin = ref(false)
 
   // Getters
@@ -20,25 +37,36 @@ export const useAuthStore = defineStore('auth', () => {
    * 로그인
    */
   async function handleLogin(email: string, password: string) {
+    // 입력값 검증
+    if (!email || !password) {
+      toast.error('이메일과 비밀번호를 입력해주세요.')
+      throw new Error('이메일과 비밀번호를 입력해주세요.')
+    }
+
     try {
       const credentials: LoginRequest = { email, password }
       const response = await authAPI.login(credentials)
 
-      // 토큰 및 사용자 정보 저장
+      // 1. 토큰 저장
+      TokenManager.setTokens(response.accessToken, response.refreshToken)
+
+      // 2. 사용자 정보 조회 (로그인 응답에 이름이 없으므로 별도 조회)
+      // 임시로 userId만 저장해두고 getMe 호출 시 업데이트
+      TokenManager.setUserInfo(response.userId, '')
+
+      const user = await userAPI.getMe()
+
+      // 3. 사용자 정보 업데이트
+      TokenManager.setUserInfo(response.userId, user.name)
+
       accessToken.value = response.accessToken
       refreshToken.value = response.refreshToken
       userId.value = response.userId
-      userName.value = response.name
+      userName.value = user.name
 
-      localStorage.setItem('accessToken', response.accessToken)
-      localStorage.setItem('refreshToken', response.refreshToken)
-      localStorage.setItem('userId', response.userId)
-      localStorage.setItem('userName', response.name)
-
-      toast.success('로그인 성공')
       return response
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || '로그인에 실패했습니다'
+    } catch (error) {
+      const errorMessage = handleApiError(error)
       toast.error(errorMessage)
       throw error
     }
@@ -52,10 +80,9 @@ export const useAuthStore = defineStore('auth', () => {
       const data: RegisterRequest = { email, name, password }
       const response = await authAPI.register(data)
 
-      toast.success('회원가입 성공! 로그인해주세요.')
       return response
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || '회원가입에 실패했습니다'
+    } catch (error) {
+      const errorMessage = handleApiError(error)
       toast.error(errorMessage)
       throw error
     }
@@ -71,16 +98,13 @@ export const useAuthStore = defineStore('auth', () => {
       console.error('로그아웃 요청 실패:', error)
     } finally {
       // 로컬 상태 초기화
+      TokenManager.clearAll()
+
       accessToken.value = null
       refreshToken.value = null
       userId.value = null
       userName.value = null
       isFirstLogin.value = false
-
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('userId')
-      localStorage.removeItem('userName')
 
       toast.info('로그아웃되었습니다')
     }
@@ -91,36 +115,41 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function handleDeleteAccount() {
     try {
+      // 1. 백엔드에 계정 삭제 요청
       await userAPI.deleteMe()
+
+      // 2. 삭제 성공 - 로컬 토큰 및 상태 정리 (백엔드 API 호출 없이)
+      TokenManager.clearAll()
+
+      accessToken.value = null
+      refreshToken.value = null
+      userId.value = null
+      userName.value = null
+      isFirstLogin.value = false
+
       toast.success('계정이 삭제되었습니다')
 
-      // 로그아웃 처리
-      await handleLogout()
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || '계정 삭제에 실패했습니다'
+      // 3. View에서 router.push('/login')으로 로그인 페이지로 이동
+    } catch (error) {
+      const errorMessage = handleApiError(error)
       toast.error(errorMessage)
       throw error
     }
   }
 
   /**
-   * 토큰 갱신
+   * 토큰 갱신 (TokenManager 사용)
    */
   async function refreshAccessToken() {
     try {
-      if (!refreshToken.value) {
-        throw new Error('No refresh token available')
+      const newToken = await TokenManager.refreshAccessToken()
+
+      if (newToken) {
+        accessToken.value = newToken
+        refreshToken.value = TokenManager.getRefreshToken()
       }
 
-      const response = await authAPI.refresh({ refreshToken: refreshToken.value })
-
-      accessToken.value = response.accessToken
-      refreshToken.value = response.refreshToken
-
-      localStorage.setItem('accessToken', response.accessToken)
-      localStorage.setItem('refreshToken', response.refreshToken)
-
-      return response
+      return { accessToken: newToken, refreshToken: refreshToken.value }
     } catch (error) {
       console.error('토큰 갱신 실패:', error)
       await handleLogout()
@@ -151,6 +180,6 @@ export const useAuthStore = defineStore('auth', () => {
     handleLogout,
     handleDeleteAccount,
     refreshAccessToken,
-    completeFirstLogin
+    completeFirstLogin,
   }
 })

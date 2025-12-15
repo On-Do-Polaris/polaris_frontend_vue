@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Lock, User, Loader2 } from 'lucide-vue-next'
-import { useAuthStore } from '@/store/auth'
 import { useRouter, useRoute } from 'vue-router'
-import skLogo from '@/assets/sk-logo.svg'
+import { toast } from 'vue-sonner'
+import skLogo from '@/assets/sk-logo.png'
+import { useAuthStore } from '@/store/auth'
 
-const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 const email = ref('')
 const password = ref('')
@@ -16,17 +17,25 @@ const loading = ref(false)
 const handleSubmit = async () => {
   if (loading.value) return
 
+  if (!email.value || !password.value) {
+    toast.error('이메일과 비밀번호를 입력해주세요.')
+    return
+  }
+
   loading.value = true
 
   try {
     await authStore.handleLogin(email.value, password.value)
 
-    // 로그인 성공 시 redirect 쿼리가 있으면 해당 페이지로, 없으면 대시보드로 이동
+    toast.success('로그인 성공')
+
+    // 대시보드로 이동
     const redirect = route.query.redirect as string
     router.push(redirect || '/')
-  } catch (error) {
-    // 에러는 authStore에서 이미 toast로 표시됨
+  } catch (error: any) {
     console.error('로그인 실패:', error)
+    // handleLogin 내부에서 이미 toast.error를 호출하므로 여기서는 생략
+    password.value = ''
   } finally {
     loading.value = false
   }
@@ -65,7 +74,6 @@ const goToForgotPassword = () => {
                 v-model="email"
                 class="w-full pl-10 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-[#EA002C]"
                 placeholder="email@skax.co.kr"
-                required
                 :disabled="loading"
               />
             </div>
@@ -83,7 +91,6 @@ const goToForgotPassword = () => {
                 v-model="password"
                 class="w-full pl-10 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-[#EA002C]"
                 placeholder="비밀번호를 입력하세요"
-                required
                 :disabled="loading"
               />
             </div>

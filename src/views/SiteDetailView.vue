@@ -33,6 +33,14 @@ const activeTab = ref<
   'overview' | 'history' | 'scenario' | 'financial' | 'vulnerability' | 'simulation'
 >('overview')
 
+// 위치 시뮬레이션용 선택된 사이트 ID
+const selectedSimulationSiteId = ref(currentSite.value?.siteId || '')
+
+// 위치 시뮬레이션 사이트 변경 핸들러
+const handleSimulationSiteChange = (siteId: string) => {
+  selectedSimulationSiteId.value = siteId
+}
+
 const onBack = () => {
   router.back()
 }
@@ -164,19 +172,23 @@ const goToDashboard = () => {
           </p>
         </div>
         <div v-if="activeTab === 'history'">
-          <HistoricalDisasters />
+          <HistoricalDisasters :siteId="currentSite.siteId" />
         </div>
         <div v-if="activeTab === 'scenario'">
           <TCFDScenario />
         </div>
         <div v-if="activeTab === 'financial'">
-          <FinancialImpact :site="currentSite" />
+          <FinancialImpact />
         </div>
         <div v-if="activeTab === 'vulnerability'">
-          <AssetVulnerability :site="currentSite" />
+          <AssetVulnerability />
         </div>
         <div v-if="activeTab === 'simulation'">
-          <LocationSimulation :site="currentSite" />
+          <LocationSimulation
+            :selectedSiteId="selectedSimulationSiteId"
+            :sites="sitesStore.allSites"
+            @update:selectedSiteId="handleSimulationSiteChange"
+          />
         </div>
       </div>
     </div>

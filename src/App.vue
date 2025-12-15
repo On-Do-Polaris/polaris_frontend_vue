@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterView, useRouter } from 'vue-router'
-import { Toaster } from 'vue-sonner'
+import { computed, onErrorCaptured, onMounted, onUnmounted } from 'vue'
+import { RouterView, useRouter, useRoute } from 'vue-router'
+import { Toaster, toast } from 'vue-sonner'
 import Header from '@/components/common/Header.vue'
 import OnboardingModal from '@/components/common/OnboardingModal.vue'
 import { useAuthStore } from './store/auth'
@@ -10,8 +10,26 @@ import { useUiStore } from './store/ui'
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const router = useRouter()
+const route = useRoute()
 
-const shouldShowOnboarding = computed(() => authStore.isFirstLogin && uiStore.showOnboarding)
+const shouldShowOnboarding = computed(() => {
+  try {
+    return authStore.isFirstLogin && uiStore.showOnboarding
+  } catch (error) {
+    console.error('[App] Error in shouldShowOnboarding:', error)
+    return false
+  }
+})
+
+const shouldShowHeader = computed(() => {
+  return authStore.isLoggedIn && !route.meta.hideHeader
+})
+
+// 전역 에러 확인
+onErrorCaptured((error) => {
+  console.error('[App] Component error captured:', error)
+  return false
+})
 
 const handleOnboardingComplete = () => {
   uiStore.setShowOnboarding(false)
@@ -23,6 +41,28 @@ const handleOnboardingClose = () => {
   authStore.handleLogout()
   router.push('/login')
 }
+
+// 자동 로그아웃 이벤트 리스너 (토큰 갱신 실패 시)
+const handleAuthLogout = () => {
+  console.log('[App] Auto logout triggered - Invalid or expired token')
+
+  // 토스트 메시지 표시
+  toast.error('로그인 시간 만료로 다시 로그인해주세요')
+
+  // 히스토리를 완전히 초기화하고 로그인 페이지로 리다이렉트
+  // window.location.replace()를 사용하면 현재 페이지를 교체하여 뒤로 가기가 불가능
+  setTimeout(() => {
+    window.location.replace('/login')
+  }, 1500) // 토스트 메시지를 볼 시간을 주기 위해 지연
+}
+
+onMounted(() => {
+  window.addEventListener('auth:logout', handleAuthLogout)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('auth:logout', handleAuthLogout)
+})
 </script>
 
 <template>
@@ -38,9 +78,13 @@ const handleOnboardingClose = () => {
     }"
   />
   <div v-if="authStore.isLoggedIn" class="h-screen flex flex-col bg-gray-50">
-    <Header />
+    <Header v-if="shouldShowHeader" />
     <div class="flex-1 overflow-y-auto">
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition name="fade" mode="out-in">
+          <component :is="Component" :key="route.path" />
+        </Transition>
+      </RouterView>
     </div>
   </div>
   <div v-else>
@@ -79,6 +123,23 @@ const handleOnboardingClose = () => {
   border-radius: 8px !important;
   padding: 16px !important;
   margin: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  flex-shrink: 0 !important;
+}
+
+[data-sonner-toast] [data-content] {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+[data-sonner-toast] [data-title] {
+  margin: 0 !important;
 }
 
 [data-sonner-toast][data-type='success'] {
@@ -91,5 +152,16 @@ const handleOnboardingClose = () => {
 
 [data-sonner-toast][data-type='info'] {
   border-left: 4px solid #f47725 !important;
+}
+
+/* Page transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

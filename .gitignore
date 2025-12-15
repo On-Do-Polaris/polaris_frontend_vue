@@ -41,8 +41,8 @@ coverage
 __screenshots__/
 
 # env
-.env.development
-.env.production
+.env*
+.env.example
 
 # guide
 tmp_docs/*

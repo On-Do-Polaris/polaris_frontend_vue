@@ -1,21 +1,82 @@
 <script setup lang="ts">
-import { AlertCircle, Wind, Droplets, Flame } from 'lucide-vue-next';
+import { computed, onMounted, watch } from 'vue'
+import { AlertCircle, Wind, Droplets, Flame } from 'lucide-vue-next'
+import { useAnalysis } from '@/composables/useAnalysis'
 
-const disasters = [
-  { year: 2022, type: '태풍', name: '힌남노', damage: '3,240만원', severity: 'high', icon: Wind },
-  { year: 2020, type: '집중호우', name: '8월 장마', damage: '1,850만원', severity: 'medium', icon: Droplets },
-  { year: 2018, type: '폭염', name: '여름 폭염', damage: '580만원', severity: 'low', icon: Flame },
-  { year: 2016, type: '태풍', name: '차바', damage: '2,100만원', severity: 'high', icon: Wind },
-];
+interface Props {
+  siteId: string
+}
 
-const getSeverityColor = (severity: string) => {
-  switch (severity) {
-    case 'high': return 'bg-red-100 text-red-700 border-red-300';
-    case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
-    case 'low': return 'bg-green-100 text-green-700 border-green-300';
-    default: return 'bg-gray-100 text-gray-700 border-gray-300';
+const props = defineProps<Props>()
+const { pastEvents, fetchPastEvents } = useAnalysis(props.siteId)
+
+// 데이터 로드
+onMounted(async () => {
+  await fetchPastEvents()
+})
+
+// siteId 변경 시 데이터 재로드
+watch(
+  () => props.siteId,
+  async () => {
+    await fetchPastEvents()
   }
-};
+)
+
+// 이벤트 타입에 따른 아이콘 매핑
+const getEventIcon = (eventType: string) => {
+  if (eventType.includes('태풍') || eventType.includes('TYPHOON')) return Wind
+  if (eventType.includes('홍수') || eventType.includes('호우') || eventType.includes('FLOOD')) return Droplets
+  if (eventType.includes('폭염') || eventType.includes('HEATWAVE') || eventType.includes('고온')) return Flame
+  return Wind // 기본 아이콘
+}
+
+// Status를 한글로 변환 (API가 이미 한글로 줄 수도 있음)
+const getStatusLabel = (status: string) => {
+  return status
+}
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case '심각':
+      return 'bg-red-100 text-red-700 border-red-300'
+    case '주의':
+      return 'bg-yellow-100 text-yellow-700 border-yellow-300'
+    case '경미':
+      return 'bg-green-100 text-green-700 border-green-300'
+    default:
+      return 'bg-gray-100 text-gray-700 border-gray-300'
+  }
+}
+
+// 재난 데이터 가공
+const disasters = computed(() => {
+  if (!pastEvents.value?.disasters) return []
+  return pastEvents.value.disasters.map((event) => ({
+    year: event.year,
+    type: event.disasterType,
+    name: event.disasterType,
+    severity: event.overallStatus,
+    icon: getEventIcon(event.disasterType),
+    warningDays: event.warningDays,
+    severeDays: event.severeDays
+  }))
+})
+
+// 통계 계산
+const totalEvents = computed(() => disasters.value.length)
+
+const mainDisasterType = computed(() => {
+  if (disasters.value.length === 0) return '-'
+  // 가장 많이 발생한 재해 유형 찾기
+  const typeCount: Record<string, number> = {}
+  disasters.value.forEach((event) => {
+    typeCount[event.type] = (typeCount[event.type] || 0) + 1
+  })
+  const keys = Object.keys(typeCount)
+  if (keys.length === 0) return '-'
+  return keys.reduce((a, b) => ((typeCount[a] || 0) > (typeCount[b] || 0) ? a : b))
+})
 </script>
 
 <template>
@@ -39,40 +100,26 @@ const getSeverityColor = (severity: string) => {
             <div class="flex items-center gap-2">
               <span class="text-gray-900">{{ disaster.year }}년 {{ disaster.type }}</span>
               <span
-                :class="`px-2 py-0.5 text-xs border ${getSeverityColor(
+                :class="`px-2 py-0.5 text-xs border ${getStatusColor(
                   disaster.severity
                 )}`"
               >
-                {{
-                  disaster.severity === 'high'
-                    ? '심각'
-                    : disaster.severity === 'medium'
-                    ? '보통'
-                    : '경미'
-                }}
+                {{ getStatusLabel(disaster.severity) }}
               </span>
             </div>
-            <div class="text-sm text-gray-500 mt-1">{{ disaster.name }}</div>
+            <div class="text-sm text-gray-500 mt-1">주의보: {{ disaster.warningDays }}일 / 경보: {{ disaster.severeDays }}일</div>
           </div>
-        </div>
-        <div class="text-right">
-          <div class="text-gray-900">피해액</div>
-          <div class="text-sm text-[#dc042b]">{{ disaster.damage }}</div>
         </div>
       </div>
     </div>
 
-    <div class="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+    <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
       <div class="text-center">
-        <div class="text-2xl text-gray-900">4</div>
-        <div class="text-xs text-gray-500 mt-1">총 재해 건수 (최근 10년)</div>
+        <div class="text-2xl text-gray-900">{{ totalEvents }}</div>
+        <div class="text-xs text-gray-500 mt-1">총 재해 건수 (데이터 보유 기간)</div>
       </div>
       <div class="text-center">
-        <div class="text-2xl text-[#dc042b]">7,770만원</div>
-        <div class="text-xs text-gray-500 mt-1">누적 피해액</div>
-      </div>
-      <div class="text-center">
-        <div class="text-2xl text-gray-900">태풍</div>
+        <div class="text-2xl text-gray-900">{{ mainDisasterType }}</div>
         <div class="text-xs text-gray-500 mt-1">주요 재해 유형</div>
       </div>
     </div>

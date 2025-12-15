@@ -1,41 +1,32 @@
 import apiClient from './client'
 import type {
-  SiteListResponse,
-  Site,
+  SiteResponse,
+  SiteInfo,
   CreateSiteRequest,
   UpdateSiteRequest
 } from './types'
 
-export const siteAPI = {
-  /**
-   * 사업장 목록 조회
-   */
-  getSites: async (): Promise<SiteListResponse> => {
-    const response = await apiClient.get<SiteListResponse>('/api/sites')
+export const sitesAPI = {
+  getSites: async (): Promise<SiteResponse> => {
+    const response = await apiClient.get<SiteResponse>('/api/sites')
     return response.data
   },
 
-  /**
-   * 사업장 생성
-   */
-  createSite: async (data: CreateSiteRequest): Promise<Site> => {
-    const response = await apiClient.post<Site>('/api/sites', data)
+  createSite: async (data: CreateSiteRequest): Promise<SiteInfo> => {
+    const response = await apiClient.post<SiteInfo>('/api/site', data)
     return response.data
   },
 
-  /**
-   * 사업장 수정
-   */
-  updateSite: async (siteId: string, data: UpdateSiteRequest): Promise<Site> => {
-    const response = await apiClient.patch<Site>(`/api/sites/${siteId}`, data)
+  updateSite: async (siteId: string, data: UpdateSiteRequest): Promise<SiteInfo> => {
+    const response = await apiClient.patch<SiteInfo>('/api/site', data, {
+      params: { siteId }
+    })
     return response.data
   },
 
-  /**
-   * 사업장 삭제
-   */
-  deleteSite: async (siteId: string): Promise<{ message: string }> => {
-    const response = await apiClient.delete(`/api/sites/${siteId}`)
-    return response.data
+  deleteSite: async (siteId: string): Promise<void> => {
+    await apiClient.delete('/api/site', {
+      params: { siteId }
+    })
   }
 }

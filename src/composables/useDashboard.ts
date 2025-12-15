@@ -1,11 +1,13 @@
 import { ref, type Ref } from 'vue'
 import { dashboardAPI } from '@/api'
-import type { DashboardSummary } from '@/api/types'
+import type { DashboardSummaryResponse } from '@/api/types'
+import { processError } from '@/utils/errorHandler'
+import { toast } from 'vue-sonner'
 
 export function useDashboard() {
-  const summary = ref<DashboardSummary | null>(null)
+  const summary = ref<DashboardSummaryResponse | null>(null)
   const loading = ref(false)
-  const error: Ref<Error | null> = ref(null)
+  const error: Ref<string | null> = ref(null)
 
   /**
    * 대시보드 요약 정보 조회
@@ -15,10 +17,11 @@ export function useDashboard() {
     error.value = null
 
     try {
-      summary.value = await dashboardAPI.getSummary()
+      summary.value = await dashboardAPI.getDashboard()
     } catch (err) {
-      error.value = err as Error
-      console.error('대시보드 요약 정보 조회 실패:', err)
+      const errorMessage = processError('대시보드 요약 정보 조회', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
     } finally {
       loading.value = false
     }
@@ -28,6 +31,6 @@ export function useDashboard() {
     summary,
     loading,
     error,
-    fetchSummary
+    fetchSummary,
   }
 }

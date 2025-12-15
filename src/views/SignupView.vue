@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Lock, Building, Mail, Loader2 } from 'lucide-vue-next'
-import { useAuthStore } from '@/store/auth'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
-import skLogo from '@/assets/sk-logo.svg'
+import skLogo from '@/assets/sk-logo.png'
+import { authAPI } from '@/api/auth'
 
-const authStore = useAuthStore()
 const router = useRouter()
 
 const email = ref('')
@@ -19,9 +18,15 @@ const isVerified = ref(false)
 const loading = ref(false)
 
 const handleSubmit = async () => {
-  // 이메일 인증 체크 (선택사항)
+  // 이메일 인증 체크
   if (!isVerified.value) {
     toast.error('이메일 인증을 완료해주세요.')
+    return
+  }
+
+  // 이름 체크
+  if (!name.value.trim()) {
+    toast.error('담당자 이름을 입력해주세요.')
     return
   }
 
@@ -42,37 +47,75 @@ const handleSubmit = async () => {
   loading.value = true
 
   try {
-    await authStore.handleSignup(email.value, name.value, password.value)
+    await authAPI.register({
+      email: email.value,
+      name: name.value,
+      password: password.value
+    })
 
     // 회원가입 성공 시 로그인 페이지로 이동
     toast.success('회원가입이 완료되었습니다. 로그인해주세요.')
     router.push('/login')
-  } catch (error) {
-    // 에러는 authStore에서 이미 toast로 표시됨
+  } catch (error: any) {
     console.error('회원가입 실패:', error)
+    const errorMessage = error?.response?.data?.message || '회원가입에 실패했습니다.'
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
 }
 
-const handleSendCode = () => {
+const handleSendCode = async () => {
   if (!email.value) {
     toast.error('이메일을 입력해주세요.')
     return
   }
 
-  // TODO: 실제 이메일 인증 API가 구현되면 연동
-  isCodeSent.value = true
-  toast.success('인증번호가 이메일로 전송되었습니다.')
+  if (loading.value) return
+
+  loading.value = true
+
+  try {
+    await authAPI.registerEmail({ email: email.value })
+    isCodeSent.value = true
+    toast.success('인증번호가 이메일로 전송되었습니다.')
+  } catch (error: any) {
+    console.error('인증번호 발송 실패:', error)
+    const errorMessage = error?.response?.data?.message || '인증번호 발송에 실패했습니다.'
+    toast.error(errorMessage)
+  } finally {
+    loading.value = false
+  }
 }
 
-const handleVerifyCode = () => {
-  // TODO: 실제 인증번호 검증 API가 구현되면 연동
-  if (verificationCode.value === '123456') {
+const handleVerifyCode = async () => {
+  if (!verificationCode.value) {
+    toast.error('인증번호를 입력해주세요.')
+    return
+  }
+
+  if (verificationCode.value.length !== 6) {
+    toast.error('인증번호는 6자리입니다.')
+    return
+  }
+
+  if (loading.value) return
+
+  loading.value = true
+
+  try {
+    await authAPI.verifyCode({
+      email: email.value,
+      verificationCode: verificationCode.value
+    })
     isVerified.value = true
     toast.success('이메일 인증이 완료되었습니다.')
-  } else {
-    toast.error('인증번호가 올바르지 않습니다.')
+  } catch (error: any) {
+    console.error('인증번호 확인 실패:', error)
+    const errorMessage = error?.response?.data?.message || '인증번호가 올바르지 않습니다.'
+    toast.error(errorMessage)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -147,7 +190,6 @@ const goToLogin = () => {
                 확인
               </button>
             </div>
-            <p class="text-xs text-gray-500 mt-2">테스트용 인증번호: 123456</p>
           </div>
 
           <div>

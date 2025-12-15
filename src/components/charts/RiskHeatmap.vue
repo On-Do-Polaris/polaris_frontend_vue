@@ -1,125 +1,195 @@
 <script setup lang="ts">
-import { MapPin } from 'lucide-vue-next';
-import type { Site } from '@/store/sites';
+import { ref, computed } from 'vue'
+import { fromLonLat, transformExtent } from 'ol/proj'
+import { useVWorld } from '@/composables/useVWorld'
+import type { SiteInfo } from '@/store/sites'
+import type { SiteSummary } from '@/api/types'
 
 interface RiskHeatmapProps {
-  sites: Site[];
+  sites: SiteInfo[] | SiteSummary[]
 }
 
-const props = defineProps<RiskHeatmapProps>();
-const emit = defineEmits(['select-site']);
+const props = defineProps<RiskHeatmapProps>()
+const emit = defineEmits(['select-site'])
 
-const getRiskColor = (level: string) => {
+// 지도 중심 (한국 중심 - EPSG:3857 변환)
+const center = ref(fromLonLat([127.0, 37.5]))
+const zoom = ref(7)
+
+// VWorld 제공 범위 제한 (대한민국 영역)
+const vworldExtent = transformExtent([124, 33, 132, 43], 'EPSG:4326', 'EPSG:3857')
+
+// VWorld WMTS 타일 URL
+const { getWMTSUrl: getBaseWMTSUrl } = useVWorld()
+const vworldTileUrl = (tileCoord: number[]) => {
+  const z = tileCoord[0]
+  const x = tileCoord[1]
+  const y = tileCoord[2]
+  // VWorld는 {y}/{x} 순서 사용
+  const baseUrl = getBaseWMTSUrl('Base').replace('{z}', String(z)).replace('{x}', String(y)).replace('{y}', String(x))
+  return baseUrl
+}
+
+// 좌표 가져오기 (백엔드에서 위경도가 없으면 임시 좌표 사용)
+const getCoordinates = (site: SiteInfo | SiteSummary, index: number): [number, number] => {
+  if (site.latitude && site.longitude) {
+    return [site.longitude, site.latitude] // [경도, 위도]
+  }
+  // fallback: 임시로 한국 중심부 근처에 분산된 좌표 생성
+  const baseLatitude = 36.5 + Math.sin(index * 0.7) * 2
+  const baseLongitude = 127.5 + Math.cos(index * 0.7) * 2
+  return [baseLongitude, baseLatitude]
+}
+
+// 리스크 레벨 결정 (totalRiskScore 기반)
+const getRiskLevel = (site: SiteInfo | SiteSummary): 'high' | 'medium' | 'low' => {
+  // SiteSummary 타입이면 totalRiskScore 사용
+  const score = (site as SiteSummary).totalRiskScore
+  if (score !== undefined) {
+    if (score >= 70) return 'high'
+    if (score >= 40) return 'medium'
+    return 'low'
+  }
+  // fallback: siteType 기반 (이전 로직)
+  const type = site.siteType.toUpperCase()
+  if (type.includes('HIGH') || type.includes('CRITICAL')) return 'high'
+  if (type.includes('MEDIUM') || type.includes('MODERATE')) return 'medium'
+  return 'low'
+}
+
+// 리스크 색상
+const getRiskColor = (level: 'high' | 'medium' | 'low') => {
   switch (level) {
     case 'high':
-      return '#dc2626';
+      return '#dc2626' // red-600 (빨간색)
     case 'medium':
-      return '#f59e0b';
+      return '#eab308' // yellow-500 (노란색)
     case 'low':
-      return '#10b981';
+      return '#16a34a' // green-600 (초록색)
     default:
-      return '#6b7280';
+      return '#6b7280' // gray-500
   }
-};
+}
 
-const getRiskSize = (level: string) => {
-  switch (level) {
-    case 'high':
-      return 24;
-    case 'medium':
-      return 20;
-    case 'low':
-      return 16;
-    default:
-      return 16;
-  }
-};
+// 좌표를 포함한 사이트 목록 (위경도가 있는 사이트만 표시)
+const sitesWithCoordinates = computed(() =>
+  props.sites
+    .map((site, index) => {
+      const coords = getCoordinates(site, index)
+      return {
+        ...site,
+        coordinates: fromLonLat(coords),
+        riskLevel: getRiskLevel(site),
+        hasRealCoords: !!(site.latitude && site.longitude)
+      }
+    })
+    .filter(site => site.coordinates) // 좌표가 있는 사이트만 필터링
+)
 
-const selectSite = (site: Site) => {
-  emit('select-site', site);
-};
+// 마커 클릭 이벤트
+const handleMarkerClick = (site: SiteInfo | SiteSummary) => {
+  emit('select-site', site)
+}
 </script>
 
 <template>
-  <div class="relative w-full h-full bg-gray-100">
-    <!-- Map Placeholder -->
-    <div class="absolute inset-0 flex items-center justify-center text-gray-400">
-      <div class="text-center">
-        <MapPin :size="48" class="mx-auto mb-2 text-gray-300" />
-        <p class="text-sm">지도 기반 히트맵 (Geocoding 연동)</p>
-      </div>
-    </div>
-
-    <!-- Risk Markers Overlay -->
-    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1000 500">
-      <!-- Korea outline approximation -->
-      <path
-        d="M 400 100 L 450 80 L 500 100 L 520 150 L 550 200 L 560 280 L 540 350 L 500 400 L 450 420 L 400 400 L 380 350 L 370 280 L 390 200 L 400 150 Z"
-        fill="none"
-        stroke="#d1d5db"
-        stroke-width="2"
+  <div class="w-full h-full">
+    <ol-map
+      :loadTilesWhileAnimating="true"
+      :loadTilesWhileInteracting="true"
+      style="height: 100%"
+    >
+      <!-- 지도 뷰 설정 (EPSG:3857) -->
+      <ol-view
+        ref="view"
+        :center="center"
+        :rotation="0"
+        :zoom="zoom"
+        :min-zoom="6"
+        :max-zoom="19"
+        :extent="vworldExtent"
+        :projection="'EPSG:3857'"
       />
 
-      <!-- Site Markers -->
-      <g
-        v-for="site in sites"
-        :key="site.id"
-        @click="selectSite(site)"
-        class="cursor-pointer hover:opacity-80"
-      >
-        <!-- Pulsing circle for high risk -->
-        <circle
-          v-if="site.riskLevel === 'high'"
-          :cx="400 + (site.coordinates.lng - 127) * 50"
-          :cy="300 - (site.coordinates.lat - 35) * 50"
-          :r="getRiskSize(site.riskLevel) + 8"
-          :fill="getRiskColor(site.riskLevel)"
-          opacity="0.2"
-        >
-          <animate
-            attributeName="r"
-            :from="getRiskSize(site.riskLevel) + 8"
-            :to="getRiskSize(site.riskLevel) + 16"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-          <animate
-            attributeName="opacity"
-            from="0.3"
-            to="0"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-        </circle>
+      <!-- 배경 지도 (VWorld Base Map) -->
+      <ol-tile-layer>
+        <ol-source-xyz :tileUrlFunction="vworldTileUrl" :crossOrigin="'anonymous'" />
+      </ol-tile-layer>
 
-        <!-- Main marker -->
-        <circle
-          :cx="400 + (site.coordinates.lng - 127) * 50"
-          :cy="300 - (site.coordinates.lat - 35) * 50"
-          :r="getRiskSize(site.riskLevel)"
-          :fill="getRiskColor(site.riskLevel)"
-          opacity="0.8"
-        />
-        <circle
-          :cx="400 + (site.coordinates.lng - 127) * 50"
-          :cy="300 - (site.coordinates.lat - 35) * 50"
-          :r="getRiskSize(site.riskLevel) / 2"
-          fill="white"
-          opacity="0.5"
-        />
+      <!-- 사업장 마커 레이어 -->
+      <ol-vector-layer>
+        <ol-source-vector>
+          <ol-feature
+            v-for="(site, index) in sitesWithCoordinates"
+            :key="site.siteId || index"
+            @click="handleMarkerClick(site)"
+          >
+            <ol-geom-point :coordinates="site.coordinates"></ol-geom-point>
+            <ol-style>
+              <ol-style-circle :radius="12">
+                <ol-style-fill :color="getRiskColor(site.riskLevel)"></ol-style-fill>
+                <ol-style-stroke
+                  :color="'white'"
+                  :width="2"
+                ></ol-style-stroke>
+              </ol-style-circle>
+            </ol-style>
+          </ol-feature>
+        </ol-source-vector>
+      </ol-vector-layer>
 
-        <!-- Label -->
-        <text
-          :x="400 + (site.coordinates.lng - 127) * 50"
-          :y="300 - (site.coordinates.lat - 35) * 50 - getRiskSize(site.riskLevel) - 5"
-          text-anchor="middle"
-          font-size="12"
-          fill="#111827"
-          font-weight="500"
-        >
-          {{ site.name }}
-        </text>
-      </g>
-    </svg>
+      <!-- 전체 화면 컨트롤 -->
+      <ol-fullscreen-control />
+    </ol-map>
   </div>
 </template>
+
+<style scoped>
+/* OpenLayers 스타일 커스터마이징 */
+:deep(.ol-zoom) {
+  top: 0.5rem;
+  right: 0.5rem;
+  left: auto;
+}
+
+:deep(.ol-zoom button) {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d1d5db;
+  color: #374151;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.125rem;
+}
+
+:deep(.ol-zoom button):hover {
+  background-color: #f9fafb;
+}
+
+:deep(.ol-full-screen) {
+  top: auto;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  left: auto;
+}
+
+:deep(.ol-full-screen button) {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d1d5db;
+  color: #374151;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.125rem;
+}
+
+:deep(.ol-full-screen button):hover {
+  background-color: #f9fafb;
+}
+
+:deep(.ol-attribution) {
+  font-size: 0.625rem;
+}
+
+:deep(.ol-viewport) {
+  cursor: default !important;
+}
+</style>
