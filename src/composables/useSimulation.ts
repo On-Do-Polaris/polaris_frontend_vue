@@ -6,10 +6,12 @@ import type {
   ClimateSimulationRequest,
   ClimateSimulationResponse
 } from '@/api/types'
+import { processError } from '@/utils/errorHandler'
+import { toast } from 'vue-sonner'
 
 export function useSimulation() {
   const loading = ref(false)
-  const error: Ref<Error | null> = ref(null)
+  const error: Ref<string | null> = ref(null)
   const relocationResult: Ref<RelocationSimulationResponse | null> = ref(null)
   const climateResult: Ref<ClimateSimulationResponse | null> = ref(null)
 
@@ -27,8 +29,9 @@ export function useSimulation() {
       relocationResult.value = result
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('사업장 이전 시뮬레이션 실패:', err)
+      const errorMessage = processError('사업장 이전 시뮬레이션', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -49,8 +52,9 @@ export function useSimulation() {
       climateResult.value = result
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('기후 시뮬레이션 실패:', err)
+      const errorMessage = processError('기후 시뮬레이션', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false

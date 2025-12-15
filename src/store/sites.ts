@@ -1,14 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { siteAPI } from '@/api'
-import type { Site, CreateSiteRequest, UpdateSiteRequest } from '@/api/types'
+import { sitesAPI } from '@/api'
+import type { SiteInfo, CreateSiteRequest, UpdateSiteRequest } from '@/api/types'
 import { toast } from 'vue-sonner'
 
-export type { Site }
+export type { SiteInfo }
 
 export const useSitesStore = defineStore('sites', () => {
   // State
-  const allSites = ref<Site[]>([])
+  const allSites = ref<SiteInfo[]>([])
   const loading = ref(false)
   const error = ref<Error | null>(null)
 
@@ -20,8 +20,8 @@ export const useSitesStore = defineStore('sites', () => {
     error.value = null
 
     try {
-      const response = await siteAPI.getSites()
-      allSites.value = response.sites
+      const response = await sitesAPI.getSites()
+      allSites.value = response?.sites || []
     } catch (err) {
       error.value = err as Error
       console.error('사업장 목록 조회 실패:', err)
@@ -34,12 +34,12 @@ export const useSitesStore = defineStore('sites', () => {
   /**
    * 사업장 생성
    */
-  const createSite = async (data: CreateSiteRequest): Promise<Site> => {
+  const createSite = async (data: CreateSiteRequest): Promise<SiteInfo> => {
     loading.value = true
     error.value = null
 
     try {
-      const newSite = await siteAPI.createSite(data)
+      const newSite = await sitesAPI.createSite(data)
       allSites.value.push(newSite)
       toast.success('사업장이 생성되었습니다.')
       return newSite
@@ -56,12 +56,12 @@ export const useSitesStore = defineStore('sites', () => {
   /**
    * 사업장 수정
    */
-  const updateSite = async (siteId: string, data: UpdateSiteRequest): Promise<Site> => {
+  const updateSite = async (siteId: string, data: UpdateSiteRequest): Promise<SiteInfo> => {
     loading.value = true
     error.value = null
 
     try {
-      const updatedSite = await siteAPI.updateSite(siteId, data)
+      const updatedSite = await sitesAPI.updateSite(siteId, data)
       const index = allSites.value.findIndex((s) => s.siteId === siteId)
       if (index !== -1) {
         allSites.value[index] = updatedSite
@@ -86,7 +86,7 @@ export const useSitesStore = defineStore('sites', () => {
     error.value = null
 
     try {
-      await siteAPI.deleteSite(siteId)
+      await sitesAPI.deleteSite(siteId)
       allSites.value = allSites.value.filter((s) => s.siteId !== siteId)
       toast.success('사업장이 삭제되었습니다.')
     } catch (err) {

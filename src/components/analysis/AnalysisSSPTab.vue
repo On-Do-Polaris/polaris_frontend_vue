@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { Line } from 'vue-chartjs';
+import { ref, computed, onMounted, watch } from 'vue'
+import { Line } from 'vue-chartjs'
 import {
   Chart as ChartJS,
   Title,
@@ -10,250 +10,468 @@ import {
   PointElement,
   CategoryScale,
   LinearScale,
-} from 'chart.js';
-import { ChevronDown } from 'lucide-vue-next';
+} from 'chart.js'
+import { ChevronDown, Loader2 } from 'lucide-vue-next'
+import { useMeta } from '@/composables/useMeta'
+import { analysisAPI } from '@/api/analysis'
+import type { PhysicalRiskResponse } from '@/api/types'
 
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  LineElement,
-  PointElement,
-  CategoryScale,
-  LinearScale
-)
+ChartJS.register(Title, Tooltip, Legend, LineElement, PointElement, CategoryScale, LinearScale)
 
-// props 추가 (향후 API 연동을 위해)
-defineProps<{
+const props = defineProps<{
   siteId: string
 }>()
 
-type Period = '단기' | '중기' | '장기';
-type RiskFactor =
-  | '이상 고온'
-  | '물 부족'
-  | '폭우 침수'
-  | '하천 범람'
-  | '산사태'
-  | '해안 홍수'
-  | '태풍'
-  | '가뭄'
-  | '산불';
+const { hazardTypes, fetchHazardTypes } = useMeta()
 
-const selectedPeriod = ref<Period>('장기');
-const selectedRiskFactor = ref<RiskFactor>('이상 고온');
-const isPeriodDropdownOpen = ref(false);
-const isRiskDropdownOpen = ref(false);
+type Period = '장기' | '중기' | '단기'
 
-const periods: Period[] = ['단기', '중기', '장기'];
-const riskFactors: RiskFactor[] = [
-  '이상 고온',
-  '물 부족',
-  '폭우 침수',
-  '하천 범람',
-  '산사태',
-  '해안 홍수',
-  '태풍',
-  '가뭄',
-  '산불',
-];
+const selectedPeriod = ref<Period>('장기')
+const selectedRiskFactor = ref<string>('')
+const loading = ref(false)
+const error = ref<string | null>(null)
+const sspData = ref<PhysicalRiskResponse | null>(null)
 
-interface PeriodData {
-  period: string;
-  SSP1: number;
-  SSP2: number;
-  SSP4: number;
-  SSP5: number;
+const periods: Period[] = ['장기', '중기', '단기']
+
+// hazards API에서 받아온 name 목록
+const riskFactors = computed(() => hazardTypes.value.map((h) => h.name))
+
+// 시나리오 이름 매핑
+const scenarioNames = {
+  scenarios1: 'SSP1-2.6',
+  scenarios2: 'SSP2-4.5',
+  scenarios3: 'SSP3-7.0',
+  scenarios4: 'SSP5-8.5',
+} as const
+
+// 기간을 API term으로 변환
+const periodToTerm = (period: Period): 'short' | 'mid' | 'long' => {
+  switch (period) {
+    case '단기':
+      return 'short'
+    case '중기':
+      return 'mid'
+    case '장기':
+      return 'long'
+    default:
+      return 'long'
+  }
 }
 
-const getDataByPeriod = (
-  period: Period,
-  riskFactor: RiskFactor
-): PeriodData[] => {
-  const currentRiskScores: Record<RiskFactor, number> = {
-    '이상 고온': 85,
-    '물 부족': 72,
-    '폭우 침수': 80,
-    '하천 범람': 55,
-    '산사태': 25,
-    '해안 홍수': 0,
-    '태풍': 30,
-    '가뭄': 40,
-    '산불': 20,
-  };
+// API 데이터 로드
+const loadSSPData = async () => {
+  if (!selectedRiskFactor.value) return
 
-  const baseScore = currentRiskScores[riskFactor];
+  loading.value = true
+  error.value = null
 
-  if (period === '단기') {
-    return [
-      { period: '1분기', SSP1: Math.round(baseScore * 0.6), SSP2: Math.round(baseScore * 0.7), SSP4: Math.round(baseScore * 0.85), SSP5: Math.round(baseScore * 1.0) },
-      { period: '2분기', SSP1: Math.round(baseScore * 0.65), SSP2: Math.round(baseScore * 0.75), SSP4: Math.round(baseScore * 0.9), SSP5: Math.round(baseScore * 1.05) },
-      { period: '3분기', SSP1: Math.round(baseScore * 0.7), SSP2: Math.round(baseScore * 0.8), SSP4: Math.round(baseScore * 0.95), SSP5: Math.round(baseScore * 1.1) },
-      { period: '4분기', SSP1: Math.round(baseScore * 0.68), SSP2: Math.round(baseScore * 0.78), SSP4: Math.round(baseScore * 0.92), SSP5: Math.round(baseScore * 1.08) },
-    ];
-  } else if (period === '중기') {
-    return [
-      { period: '26년', SSP1: Math.round(baseScore * 0.75), SSP2: Math.round(baseScore * 0.9), SSP4: Math.round(baseScore * 1.05), SSP5: Math.round(baseScore * 1.2) },
-      { period: '27년', SSP1: Math.round(baseScore * 0.8), SSP2: Math.round(baseScore * 0.95), SSP4: Math.round(baseScore * 1.1), SSP5: Math.round(baseScore * 1.25) },
-      { period: '28년', SSP1: Math.round(baseScore * 0.85), SSP2: Math.round(baseScore * 1.0), SSP4: Math.round(baseScore * 1.15), SSP5: Math.round(baseScore * 1.3) },
-      { period: '29년', SSP1: Math.round(baseScore * 0.9), SSP2: Math.round(baseScore * 1.05), SSP4: Math.round(baseScore * 1.2), SSP5: Math.round(baseScore * 1.35) },
-      { period: '30년', SSP1: Math.round(baseScore * 0.95), SSP2: Math.round(baseScore * 1.1), SSP4: Math.round(baseScore * 1.25), SSP5: Math.round(baseScore * 1.4) },
-    ];
-  } else {
-    return [
-      { period: '20년대', SSP1: Math.round(baseScore * 0.85), SSP2: Math.round(baseScore * 1.0), SSP4: Math.round(baseScore * 1.15), SSP5: Math.round(baseScore * 1.3) },
-      { period: '30년대', SSP1: Math.round(baseScore * 1.0), SSP2: Math.round(baseScore * 1.2), SSP4: Math.round(baseScore * 1.4), SSP5: Math.round(baseScore * 1.6) },
-      { period: '40년대', SSP1: Math.round(baseScore * 1.1), SSP2: Math.round(baseScore * 1.35), SSP4: Math.round(baseScore * 1.6), SSP5: Math.round(baseScore * 1.85) },
-      { period: '50년대', SSP1: Math.round(baseScore * 1.15), SSP2: Math.round(baseScore * 1.45), SSP4: Math.round(baseScore * 1.75), SSP5: Math.round(baseScore * 2.0) },
-    ];
+  try {
+    // hazardTypes와 physical-risk 데이터 로드
+    await fetchHazardTypes()
+
+    const term = periodToTerm(selectedPeriod.value)
+    const response = await analysisAPI.getPhysicalRisk(props.siteId, selectedRiskFactor.value, term)
+
+    sspData.value = response
+  } catch (err) {
+    console.error('SSP 데이터 로드 실패:', err)
+    error.value = '데이터를 불러오는데 실패했습니다'
+  } finally {
+    loading.value = false
   }
-};
+}
+
+// 레이블 포맷팅
+const formatLabel = (key: string): string => {
+  // 숫자만 있는 경우 '년' 붙이기
+  if (/^\d+$/.test(key)) {
+    return `${key}년`
+  }
+  return key
+}
+
+// 컴포넌트 마운트 시 hazardTypes 로드
+onMounted(async () => {
+  await fetchHazardTypes()
+})
+
+// siteId 변경 감지
+watch(
+  () => props.siteId,
+  () => {
+    if (selectedRiskFactor.value) {
+      loadSSPData()
+    }
+  },
+)
+
+// hazardTypes가 로드되면 첫 번째 값을 selectedRiskFactor로 설정
+watch(
+  hazardTypes,
+  (newHazardTypes) => {
+    if (newHazardTypes.length > 0 && !selectedRiskFactor.value) {
+      const firstHazard = newHazardTypes[0]
+      if (firstHazard) {
+        selectedRiskFactor.value = firstHazard.name
+      }
+    }
+  },
+  { immediate: true },
+)
+
+// selectedRiskFactor나 selectedPeriod가 변경되면 데이터 다시 로드
+watch([selectedRiskFactor, selectedPeriod], () => {
+  if (selectedRiskFactor.value) {
+    loadSSPData()
+  }
+})
+
+// 원본 데이터를 저장 (툴팁에서 사용)
+const rawDataMap = ref<Record<string, Record<string, any>>>({})
 
 const chartData = computed(() => {
-  const data = getDataByPeriod(selectedPeriod.value, selectedRiskFactor.value);
+  if (!sspData.value) {
+    return {
+      labels: [],
+      datasets: [],
+    }
+  }
+
+  const data = sspData.value
+
+  // 첫 번째 시나리오의 키를 추출해서 레이블로 사용
+  const firstScenario = data.scenarios1 || data.scenarios2 || data.scenarios3 || data.scenarios4
+  if (!firstScenario) {
+    return {
+      labels: [],
+      datasets: [],
+    }
+  }
+
+  const dataKeys = Object.keys(firstScenario).sort()
+  const period = selectedPeriod.value
+  const isShortTerm = period === '단기'
+
+  // 단기일 때는 중앙에 배치하기 위해 빈 라벨 추가
+  let labels: string[]
+  if (isShortTerm && dataKeys.length > 0) {
+    labels = ['', formatLabel(dataKeys[0]!), '']
+  } else {
+    labels = dataKeys.map(formatLabel)
+  }
+
+  // 시나리오별 색상 매핑
+  const colors: Record<string, string> = {
+    'SSP1-2.6': '#B3CF0A',
+    'SSP2-4.5': '#EA002C',
+    'SSP3-7.0': '#009DA3',
+    'SSP5-8.5': '#F47725',
+  }
+
+  const datasets = []
+
+  // 값을 추출하는 헬퍼 함수 (객체 형태 또는 숫자 처리)
+  const extractValue = (value: any): number => {
+    if (typeof value === 'object' && value !== null && 'total' in value) {
+      return value.total
+    }
+    return typeof value === 'number' ? value : 0
+  }
+
+  // 원본 데이터 맵 초기화
+  rawDataMap.value = {}
+
+  // scenarios1 ~ scenarios4 처리
+  if (data.scenarios1) {
+    const scenarioName = scenarioNames.scenarios1
+    let scenarioData: (number | null)[]
+    if (isShortTerm && dataKeys.length > 0) {
+      // 단기일 때는 중앙에만 값, 앞뒤는 null
+      scenarioData = [null, extractValue((data.scenarios1 as any)[dataKeys[0]!]), null]
+    } else {
+      scenarioData = dataKeys.map((key) => extractValue((data.scenarios1 as any)[key]))
+    }
+    datasets.push({
+      label: scenarioName,
+      borderColor: colors['SSP1-2.6'],
+      backgroundColor: colors['SSP1-2.6'],
+      data: scenarioData,
+      fill: false,
+      tension: 0.4,
+      pointRadius: isShortTerm ? 8 : 4,
+      pointHoverRadius: isShortTerm ? 10 : 6,
+      showLine: !isShortTerm,
+    })
+    rawDataMap.value[scenarioName] = data.scenarios1
+  }
+  if (data.scenarios2) {
+    const scenarioName = scenarioNames.scenarios2
+    let scenarioData: (number | null)[]
+    if (isShortTerm && dataKeys.length > 0) {
+      scenarioData = [null, extractValue((data.scenarios2 as any)[dataKeys[0]!]), null]
+    } else {
+      scenarioData = dataKeys.map((key) => extractValue((data.scenarios2 as any)[key]))
+    }
+    datasets.push({
+      label: scenarioName,
+      borderColor: colors['SSP2-4.5'],
+      backgroundColor: colors['SSP2-4.5'],
+      data: scenarioData,
+      fill: false,
+      tension: 0.4,
+      pointRadius: isShortTerm ? 8 : 4,
+      pointHoverRadius: isShortTerm ? 10 : 6,
+      showLine: !isShortTerm,
+    })
+    rawDataMap.value[scenarioName] = data.scenarios2
+  }
+  if (data.scenarios3) {
+    const scenarioName = scenarioNames.scenarios3
+    let scenarioData: (number | null)[]
+    if (isShortTerm && dataKeys.length > 0) {
+      scenarioData = [null, extractValue((data.scenarios3 as any)[dataKeys[0]!]), null]
+    } else {
+      scenarioData = dataKeys.map((key) => extractValue((data.scenarios3 as any)[key]))
+    }
+    datasets.push({
+      label: scenarioName,
+      borderColor: colors['SSP3-7.0'],
+      backgroundColor: colors['SSP3-7.0'],
+      data: scenarioData,
+      fill: false,
+      tension: 0.4,
+      pointRadius: isShortTerm ? 8 : 4,
+      pointHoverRadius: isShortTerm ? 10 : 6,
+      showLine: !isShortTerm,
+    })
+    rawDataMap.value[scenarioName] = data.scenarios3
+  }
+  if (data.scenarios4) {
+    const scenarioName = scenarioNames.scenarios4
+    let scenarioData: (number | null)[]
+    if (isShortTerm && dataKeys.length > 0) {
+      scenarioData = [null, extractValue((data.scenarios4 as any)[dataKeys[0]!]), null]
+    } else {
+      scenarioData = dataKeys.map((key) => extractValue((data.scenarios4 as any)[key]))
+    }
+    datasets.push({
+      label: scenarioName,
+      borderColor: colors['SSP5-8.5'],
+      backgroundColor: colors['SSP5-8.5'],
+      data: scenarioData,
+      fill: false,
+      tension: 0.4,
+      pointRadius: isShortTerm ? 8 : 4,
+      pointHoverRadius: isShortTerm ? 10 : 6,
+      showLine: !isShortTerm,
+    })
+    rawDataMap.value[scenarioName] = data.scenarios4
+  }
+
   return {
-    labels: data.map(d => d.period),
-    datasets: [
-      {
-        label: 'SSP1',
-        borderColor: '#B3CF0A',
-        data: data.map(d => d.SSP1),
-        fill: false,
-        tension: 0.4,
-      },
-      {
-        label: 'SSP2',
-        borderColor: '#EA002C',
-        data: data.map(d => d.SSP2),
-        fill: false,
-        tension: 0.4,
-      },
-      {
-        label: 'SSP4',
-        borderColor: '#009DA3',
-        data: data.map(d => d.SSP4),
-        fill: false,
-        tension: 0.4,
-      },
-      {
-        label: 'SSP5',
-        borderColor: '#F47725',
-        data: data.map(d => d.SSP5),
-        fill: false,
-        tension: 0.4,
-      },
-    ],
-  };
-});
+    labels,
+    datasets,
+  }
+})
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'top' as const,
-    },
-    title: {
-      display: false,
-    },
-  },
-  scales: {
-    y: {
+const chartOptions = computed(() => {
+  const data = sspData.value
+  if (!data) {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+        },
+        title: {
+          display: false,
+        },
+      },
+      scales: {
+        y: {
+          title: {
+            display: true,
+            text: '리스크 점수',
+          },
+          min: 0,
+          max: 100,
+        },
+      },
+    }
+  }
+
+  const firstScenario = data.scenarios1 || data.scenarios2 || data.scenarios3 || data.scenarios4
+  if (!firstScenario) {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+        },
+        title: {
+          display: false,
+        },
+      },
+      scales: {
+        y: {
+          title: {
+            display: true,
+            text: '리스크 점수',
+          },
+          min: 0,
+          max: 100,
+        },
+      },
+    }
+  }
+
+  const dataKeys = Object.keys(firstScenario).sort()
+  const period = selectedPeriod.value
+  const isShortTerm = period === '단기'
+
+  // 실제 데이터 키 (단기일 때는 중간 인덱스 1이 실제 데이터)
+  const getActualKey = (index: number): string | null => {
+    if (isShortTerm) {
+      return index === 1 ? dataKeys[0] || null : null
+    }
+    return dataKeys[index] || null
+  }
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+      },
       title: {
-        display: true,
-        text: '리스크 점수',
+        display: false,
+      },
+      tooltip: {
+        callbacks: {
+          label: (context: any) => {
+            const datasetLabel = context.dataset.label || ''
+            const dataIndex = context.dataIndex
+            const actualKey = getActualKey(dataIndex)
+
+            if (!actualKey) return `${datasetLabel}: ${context.parsed.y}`
+
+            // rawDataMap에서 해당 시나리오의 원본 데이터 가져오기
+            const scenarioData = rawDataMap.value[datasetLabel]
+            if (!scenarioData) return `${datasetLabel}: ${context.parsed.y}`
+
+            const rawValue = scenarioData[actualKey]
+
+            // 객체 형태인지 확인
+            if (typeof rawValue === 'object' && rawValue !== null && 'total' in rawValue) {
+              const lines = [`${datasetLabel}:`, `  total: ${rawValue.total}`]
+              if ('h' in rawValue && rawValue.h !== undefined) {
+                lines.push(`  h: ${rawValue.h}`)
+              }
+              if ('e' in rawValue && rawValue.e !== undefined) {
+                lines.push(`  e: ${rawValue.e}`)
+              }
+              if ('v' in rawValue && rawValue.v !== undefined) {
+                lines.push(`  v: ${rawValue.v}`)
+              }
+              return lines
+            }
+
+            // 숫자인 경우
+            return `${datasetLabel}: ${rawValue}`
+          },
+        },
       },
     },
-  },
-};
+    scales: {
+      y: {
+        title: {
+          display: true,
+          text: '리스크 점수',
+        },
+        min: 0,
+        max: 100,
+      },
+    },
+  }
+})
 
-const getStrategyByRiskFactor = (riskFactor: RiskFactor): string => {
-  const strategies: Record<RiskFactor, string> = {
-    '이상 고온': '냉각 시스템 강화 및 단열재 보강',
-    '물 부족': '용수 저장 시설 확보 및 절수 설비 도입',
-    '폭우 침수': '침수 방지 설비 설치 및 배수 펌프 증',
-    '하천 범람': '배수로 및 물막이판 등 정비 실시',
-    '산사태': '사면 안정화 공사 및 배수로 정비',
-    '해안 홍수': '방조제 보강 및 해안 시설 이전 검토',
-    '태풍': '배수로 및 물막이판 등 정비 실시',
-    '가뭄': '용수 저장 시설 확보 및 절수 설비 도입',
-    '산불': '방화대 설치 및 소화 설비 확충',
-  };
-  return strategies[riskFactor];
-};
+// 대응 방안
+const strategy = computed(() => {
+  return sspData.value?.Strategy || '대응 방안 정보가 없습니다.'
+})
 </script>
 
 <template>
   <div class="mt-6">
     <!-- SSP 그래프 섹션 -->
     <div class="bg-white border border-gray-200 shadow-sm mb-6">
-      <div
-        class="border-b border-gray-200 px-6 py-3 bg-gray-50 flex items-center justify-between"
-      >
+      <div class="border-b border-gray-200 px-6 py-3 bg-gray-50 flex items-center justify-between">
         <h3 class="text-sm text-gray-900">SSP 시나리오별 리스크 전망</h3>
 
         <!-- 드롭다운 영역 -->
         <div class="flex items-center gap-3">
           <!-- 기간 선택 드롭다운 -->
           <div class="relative">
-            <button
-              @click="isPeriodDropdownOpen = !isPeriodDropdownOpen; isRiskDropdownOpen = false;"
-              class="bg-white px-4 py-2 text-sm border border-gray-300 hover:border-[#EA002C] focus:outline-none focus:border-[#EA002C] transition-colors flex items-center gap-2"
+            <select
+              v-model="selectedPeriod"
+              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
             >
-              <span class="text-gray-900">{{ selectedPeriod }}</span>
-              <ChevronDown
-                :size="16"
-                :class="['text-gray-500 transition-transform', isPeriodDropdownOpen ? 'rotate-180' : '']"
-              />
-            </button>
-
-            <div
-              v-if="isPeriodDropdownOpen"
-              class="absolute z-20 right-0 w-32 mt-1 bg-white border border-gray-300 shadow-lg"
-            >
-              <button
-                v-for="period in periods"
-                :key="period"
-                @click="selectedPeriod = period; isPeriodDropdownOpen = false;"
-                :class="['w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0', period === selectedPeriod ? 'bg-gray-50' : '']"
-              >
+              <option v-for="period in periods" :key="period" :value="period">
                 {{ period }}
-              </button>
-            </div>
+              </option>
+            </select>
+            <ChevronDown
+              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+              :size="16"
+            />
           </div>
 
           <!-- 리스크 요소 선택 드롭다운 -->
           <div class="relative">
-            <button
-              @click="isRiskDropdownOpen = !isRiskDropdownOpen; isPeriodDropdownOpen = false;"
-              class="bg-white px-4 py-2 text-sm border border-gray-300 hover:border-[#EA002C] focus:outline-none focus:border-[#EA002C] transition-colors flex items-center gap-2"
+            <select
+              v-model="selectedRiskFactor"
+              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer min-w-[160px]"
             >
-              <span class="text-gray-900">{{ selectedRiskFactor }}</span>
-              <ChevronDown
-                :size="16"
-                :class="['text-gray-500 transition-transform', isRiskDropdownOpen ? 'rotate-180' : '']"
-              />
-            </button>
-
-            <div
-              v-if="isRiskDropdownOpen"
-              class="absolute z-20 right-0 w-40 mt-1 bg-white border border-gray-300 shadow-lg max-h-80 overflow-y-auto"
-            >
-              <button
-                v-for="factor in riskFactors"
-                :key="factor"
-                @click="selectedRiskFactor = factor; isRiskDropdownOpen = false;"
-                :class="['w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0', factor === selectedRiskFactor ? 'bg-gray-50' : '']"
-              >
+              <option v-for="factor in riskFactors" :key="factor" :value="factor">
                 {{ factor }}
-              </button>
-            </div>
+              </option>
+            </select>
+            <ChevronDown
+              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+              :size="16"
+            />
           </div>
         </div>
       </div>
 
       <div class="p-6 h-[400px]">
-        <Line :data="chartData" :options="chartOptions" />
+        <!-- 로딩 상태 -->
+        <div v-if="loading" class="flex items-center justify-center h-full">
+          <Loader2 class="animate-spin text-[#EA002C]" :size="40" />
+          <span class="ml-3 text-gray-600">SSP 시나리오 데이터를 불러오는 중...</span>
+        </div>
+
+        <!-- 에러 상태 -->
+        <div v-else-if="error" class="flex items-center justify-center h-full text-red-500">
+          {{ error }}
+        </div>
+
+        <!-- 데이터가 있을 때 -->
+        <Line v-else-if="sspData" :data="chartData" :options="chartOptions" />
+
+        <!-- 데이터가 없을 때 -->
+        <div v-else class="flex items-center justify-center h-full text-gray-500">
+          SSP 시나리오 데이터가 없습니다.
+        </div>
+      </div>
+
+      <!-- 범례 안내 텍스트 -->
+      <div class="px-4 py-3 text-xs text-gray-500 border-t border-gray-100">
+        * 범례의 항목을 누르면 해당 시나리오 그래프 선을 비활성화할 수 있습니다.
       </div>
     </div>
 
@@ -266,7 +484,8 @@ const getStrategyByRiskFactor = (riskFactor: RiskFactor): string => {
         <div class="border-l-4 border-[#EA002C] bg-red-50 p-5">
           <div class="flex items-start gap-3">
             <div class="text-sm text-gray-900">
-              <span class="text-[#EA002C]">▶</span> {{ getStrategyByRiskFactor(selectedRiskFactor) }}
+              <span class="text-[#EA002C]">▶</span>
+              {{ strategy }}
             </div>
           </div>
         </div>

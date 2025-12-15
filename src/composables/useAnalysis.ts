@@ -7,12 +7,15 @@ import type {
   PastEventsResponse,
   FinancialImpactResponse,
   VulnerabilityResponse,
-  AnalysisTotalResponse
+  AnalysisTotalResponse,
 } from '@/api/types'
+import { processError } from '@/utils/errorHandler'
+import { toast } from 'vue-sonner'
+import { usePolling } from './usePolling'
 
 export function useAnalysis(siteId: string) {
   const loading = ref(false)
-  const error: Ref<Error | null> = ref(null)
+  const error: Ref<string | null> = ref(null)
   const analysisStatus: Ref<AnalysisJobStatusResponse | null> = ref(null)
   const riskScores: Ref<PhysicalRiskScoreResponse | null> = ref(null)
   const pastEvents: Ref<PastEventsResponse | null> = ref(null)
@@ -20,7 +23,11 @@ export function useAnalysis(siteId: string) {
   const vulnerability: Ref<VulnerabilityResponse | null> = ref(null)
   const totalAnalysis: Ref<AnalysisTotalResponse | null> = ref(null)
 
-  let pollingInterval: ReturnType<typeof setTimeout> | null = null
+  // 폴링을 위한 jobId 저장
+  let currentJobId: string | null = null
+
+  // 폴링 훅 초기화 (나중에 설정)
+  let polling: ReturnType<typeof usePolling<AnalysisJobStatusResponse>> | null = null
 
   /**
    * 분석 시작
@@ -32,16 +39,18 @@ export function useAnalysis(siteId: string) {
     try {
       const result = await analysisAPI.startAnalysis(siteId, data)
       analysisStatus.value = result
+      currentJobId = result.jobId
 
       // 분석 시작 후 자동으로 폴링 시작
-      if (result.status === 'PENDING' || result.status === 'PROCESSING') {
+      if (result.status === 'queued' || result.status === 'running') {
         startPolling(result.jobId)
       }
 
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('분석 시작 실패:', err)
+      const errorMessage = processError('분석 시작', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -53,57 +62,57 @@ export function useAnalysis(siteId: string) {
    */
   const startPolling = (jobId: string) => {
     // 기존 폴링이 있으면 중지
-    stopPolling()
+    polling?.stop()
 
-    pollingInterval = setInterval(async () => {
-      try {
-        const status = await analysisAPI.getAnalysisStatus(siteId, jobId)
+    // 새로운 폴링 훅 생성
+    polling = usePolling(() => analysisAPI.getAnalysisStatus(siteId, jobId), {
+      interval: 3000,
+      shouldStop: (status) => status.status === 'completed' || status.status === 'failed',
+      onSuccess: (status) => {
         analysisStatus.value = status
+      },
+      onError: (errorMessage) => {
+        error.value = errorMessage
+      },
+      maxRetries: 5,
+    })
 
-        // 완료 또는 실패 시 폴링 중지
-        if (status.status === 'COMPLETED' || status.status === 'FAILED') {
-          stopPolling()
-        }
-      } catch (err) {
-        console.error('상태 폴링 실패:', err)
-        error.value = err as Error
-        stopPolling()
-      }
-    }, 3000) // 3초마다 폴링
+    polling.start()
   }
 
   /**
    * 폴링 중지
    */
   const stopPolling = () => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval)
-      pollingInterval = null
-    }
+    polling?.stop()
   }
 
   /**
-   * 분석 작업 상태 수동 조회
+   * 분석 작업 상태 수동 조회 (Promise 기반)
+   * @deprecated
    */
   const pollAnalysisStatus = async (jobId: string): Promise<void> => {
     return new Promise((resolve, reject) => {
-      const interval = setInterval(async () => {
-        try {
-          const status = await analysisAPI.getAnalysisStatus(siteId, jobId)
+      const tempPolling = usePolling(() => analysisAPI.getAnalysisStatus(siteId, jobId), {
+        interval: 3000,
+        shouldStop: (status) => status.status === 'completed' || status.status === 'failed',
+        onSuccess: (status) => {
           analysisStatus.value = status
-
-          if (status.status === 'COMPLETED') {
-            clearInterval(interval)
+          if (status.status === 'completed') {
+            tempPolling.stop()
             resolve()
-          } else if (status.status === 'FAILED') {
-            clearInterval(interval)
-            reject(new Error(status.message || '분석 실패'))
+          } else if (status.status === 'failed') {
+            tempPolling.stop()
+            reject(new Error(status.error?.message || '분석 실패'))
           }
-        } catch (err) {
-          clearInterval(interval)
-          reject(err)
-        }
-      }, 3000) // 3초마다 확인
+        },
+        onError: (err) => {
+          tempPolling.stop()
+          reject(new Error(err))
+        },
+        maxRetries: 5,
+      })
+      tempPolling.start()
     })
   }
 
@@ -119,8 +128,9 @@ export function useAnalysis(siteId: string) {
       riskScores.value = result
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('리스크 점수 조회 실패:', err)
+      const errorMessage = processError('리스크 점수 조회', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -139,8 +149,9 @@ export function useAnalysis(siteId: string) {
       pastEvents.value = result
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('과거 재난 이력 조회 실패:', err)
+      const errorMessage = processError('과거 재난 이력 조회', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -159,8 +170,9 @@ export function useAnalysis(siteId: string) {
       financialImpact.value = result
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('재무 영향 조회 실패:', err)
+      const errorMessage = processError('재무 영향 조회', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -179,8 +191,9 @@ export function useAnalysis(siteId: string) {
       vulnerability.value = result
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('취약성 분석 조회 실패:', err)
+      const errorMessage = processError('취약성 분석 조회', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -199,8 +212,9 @@ export function useAnalysis(siteId: string) {
       totalAnalysis.value = result
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('통합 분석 결과 조회 실패:', err)
+      const errorMessage = processError('통합 분석 결과 조회', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -225,6 +239,6 @@ export function useAnalysis(siteId: string) {
     fetchFinancialImpact,
     fetchVulnerability,
     fetchTotalAnalysis,
-    stopPolling
+    stopPolling,
   }
 }

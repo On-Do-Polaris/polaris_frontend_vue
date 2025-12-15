@@ -249,7 +249,6 @@ frontend/new/
 │   │   │   └── EmissionChart.vue  # 배출량 차트
 │   │   ├── analysis/              # 분석 탭 컴포넌트
 │   │   │   ├── AnalysisOverviewTab.vue
-│   │   │   ├── AnalysisDisasterTab.vue
 │   │   │   ├── AnalysisFinancialTab.vue
 │   │   │   └── AnalysisVulnerabilityTab.vue
 │   │   ├── simulation/            # 시뮬레이션 컴포넌트

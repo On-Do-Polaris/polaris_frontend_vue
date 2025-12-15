@@ -2,21 +2,44 @@ import apiClient from './client'
 import type {
   StartAnalysisRequest,
   AnalysisJobStatusResponse,
+  AnalysisSummaryResponse,
   PhysicalRiskScoreResponse,
-  PastEventsResponse,
+  PhysicalRiskResponse,
+  AnalysisTotalResponse,
   FinancialImpactResponse,
   VulnerabilityResponse,
-  AnalysisTotalResponse
+  VulnerabilityAnalysisResponse,
+  PastEventsResponse
 } from './types'
 
 export const analysisAPI = {
-  /**
-   * 분석 시작
-   */
-  startAnalysis: async (
-    siteId: string,
-    data: StartAnalysisRequest
-  ): Promise<AnalysisJobStatusResponse> => {
+  // 온보딩 완료 후 전체 사업장 분석 시작
+  startAllSitesAnalysis: async (siteIds: string[]): Promise<{ result: string; message: string }> => {
+    const response = await apiClient.post<{ result: string; message: string }>(
+      '/api/analysis/start',
+      { sites: siteIds.map(siteId => ({ siteId })) }
+    )
+    return response.data
+  },
+
+  // 분석 상태 확인 (jobId 없이)
+  getOverallAnalysisStatus: async (): Promise<{ result: string; data: { status: string } }> => {
+    const response = await apiClient.get<{ result: string; data: { status: string } }>(
+      '/api/analysis/status'
+    )
+    return response.data
+  },
+
+  // 분석 개요 조회 (SSP2-2024 기준)
+  getAnalysisSummary: async (siteId: string): Promise<AnalysisSummaryResponse> => {
+    const response = await apiClient.get<{ result: string; data: AnalysisSummaryResponse }>(
+      '/api/analysis/summary',
+      { params: { siteId } }
+    )
+    return response.data.data
+  },
+
+  startAnalysis: async (siteId: string, data: StartAnalysisRequest): Promise<AnalysisJobStatusResponse> => {
     const response = await apiClient.post<AnalysisJobStatusResponse>(
       `/api/sites/${siteId}/analysis/start`,
       data
@@ -24,26 +47,14 @@ export const analysisAPI = {
     return response.data
   },
 
-  /**
-   * 분석 작업 상태 조회
-   */
-  getAnalysisStatus: async (
-    siteId: string,
-    jobId: string
-  ): Promise<AnalysisJobStatusResponse> => {
+  getAnalysisStatus: async (siteId: string, jobId: string): Promise<AnalysisJobStatusResponse> => {
     const response = await apiClient.get<AnalysisJobStatusResponse>(
       `/api/sites/${siteId}/analysis/status/${jobId}`
     )
     return response.data
   },
 
-  /**
-   * 물리적 리스크 점수 조회
-   */
-  getPhysicalRiskScores: async (
-    siteId: string,
-    hazardType?: string
-  ): Promise<PhysicalRiskScoreResponse> => {
+  getPhysicalRiskScores: async (siteId: string, hazardType?: string): Promise<PhysicalRiskScoreResponse> => {
     const params = hazardType ? { hazardType } : {}
     const response = await apiClient.get<PhysicalRiskScoreResponse>(
       `/api/sites/${siteId}/analysis/physical-risk-scores`,
@@ -52,19 +63,14 @@ export const analysisAPI = {
     return response.data
   },
 
-  /**
-   * 과거 재난 이력 조회
-   */
-  getPastEvents: async (siteId: string): Promise<PastEventsResponse> => {
-    const response = await apiClient.get<PastEventsResponse>(
-      `/api/sites/${siteId}/analysis/past-events`
+  getTotalAnalysis: async (siteId: string, hazardType: string): Promise<AnalysisTotalResponse> => {
+    const response = await apiClient.get<AnalysisTotalResponse>(
+      `/api/sites/${siteId}/analysis/total`,
+      { params: { hazardType } }
     )
     return response.data
   },
 
-  /**
-   * 재무 영향 분석
-   */
   getFinancialImpact: async (siteId: string): Promise<FinancialImpactResponse> => {
     const response = await apiClient.get<FinancialImpactResponse>(
       `/api/sites/${siteId}/analysis/financial-impacts`
@@ -72,9 +78,6 @@ export const analysisAPI = {
     return response.data
   },
 
-  /**
-   * 취약성 분석
-   */
   getVulnerability: async (siteId: string): Promise<VulnerabilityResponse> => {
     const response = await apiClient.get<VulnerabilityResponse>(
       `/api/sites/${siteId}/analysis/vulnerability`
@@ -82,17 +85,45 @@ export const analysisAPI = {
     return response.data
   },
 
-  /**
-   * 통합 분석 결과
-   */
-  getTotalAnalysis: async (
-    siteId: string,
-    hazardType: string
-  ): Promise<AnalysisTotalResponse> => {
-    const response = await apiClient.get<AnalysisTotalResponse>(
-      `/api/sites/${siteId}/analysis/total`,
-      { params: { hazardType } }
+  getPastEvents: async (siteId: string): Promise<PastEventsResponse> => {
+    const response = await apiClient.get<PastEventsResponse>(
+      `/api/sites/${siteId}/analysis/past-events`
     )
     return response.data
+  },
+
+  // SSP 시나리오별 물리적 리스크 전망 조회
+  getPhysicalRisk: async (
+    siteId: string,
+    hazardType: string,
+    term: 'short' | 'mid' | 'long'
+  ): Promise<PhysicalRiskResponse> => {
+    const response = await apiClient.get<{ result: string; data: PhysicalRiskResponse }>(
+      '/api/analysis/physical-risk',
+      { params: { siteId, hazardType, term } }
+    )
+    return response.data.data
+  },
+
+  // AAL (연간 평균 손실) 데이터 조회
+  getAAL: async (
+    siteId: string,
+    hazardType: string,
+    term: 'short' | 'mid' | 'long'
+  ): Promise<PhysicalRiskResponse> => {
+    const response = await apiClient.get<{ result: string; data: PhysicalRiskResponse }>(
+      '/api/analysis/aal',
+      { params: { siteId, hazardType, term } }
+    )
+    return response.data.data
+  },
+
+  // 취약성 분석 조회 (새 엔드포인트)
+  getVulnerabilityAnalysis: async (siteId: string): Promise<VulnerabilityAnalysisResponse> => {
+    const response = await apiClient.get<{ result: string; data: VulnerabilityAnalysisResponse }>(
+      '/api/analysis/vulnerability',
+      { params: { siteId } }
+    )
+    return response.data.data
   }
 }

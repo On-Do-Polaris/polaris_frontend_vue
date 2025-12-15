@@ -11,7 +11,19 @@ export function isAxiosError(error: unknown): error is AxiosError {
 /**
  * HTTP 상태 코드에 따른 기본 에러 메시지
  */
-function getDefaultErrorMessage(status?: number): string {
+function getDefaultErrorMessage(status?: number, url?: string): string {
+  // 로그인 요청인 경우
+  if (url?.includes('/api/auth/login')) {
+    switch (status) {
+      case 401:
+        return '이메일 또는 비밀번호가 올바르지 않습니다.'
+      case 404:
+        return '등록되지 않은 계정입니다.'
+      default:
+        return '로그인에 실패했습니다.'
+    }
+  }
+
   switch (status) {
     case 400:
       return '잘못된 요청입니다.'
@@ -37,12 +49,45 @@ function getDefaultErrorMessage(status?: number): string {
 }
 
 /**
- * API 에러를 사용자 친화적인 메시지로 변환
+ * API 에러 출력용 변환
  */
 export function handleApiError(error: unknown): string {
   if (isAxiosError(error)) {
     // API 응답에서 에러 메시지 추출
     const apiError = error.response?.data as ApiError | undefined
+    const requestUrl = error.config?.url || ''
+
+    // 로그인 에러 처리
+    if (requestUrl.includes('/api/auth/login')) {
+      const status = error.response?.status
+
+      if (status === 401) {
+        // 백엔드는 응답 body의 code로 구분
+        const errorCode = (apiError as any)?.code
+
+        // 계정 존재하지 않음
+        if (errorCode === 'ACCOUNT_NOT_FOUND') {
+          return '존재하지 않는 계정입니다.'
+        }
+
+        // 비밀번호 오류 또는 기타 인증 실패
+        if (apiError?.message) {
+          return apiError.message
+        }
+
+        return '이메일 또는 비밀번호가 올바르지 않습니다.'
+      }
+
+      return '로그인에 실패했습니다.'
+    }
+
+    if (apiError?.message && apiError.message.includes('DataIntegrityViolationException')) {
+      return '계정 삭제에 실패했습니다. 서버 설정 문제가 있습니다. 관리자에게 문의해주세요.'
+    }
+
+    if (apiError?.message && apiError.message.includes('Referential integrity constraint')) {
+      return '계정 삭제에 실패했습니다. 서버 설정 문제가 있습니다. 관리자에게 문의해주세요.'
+    }
 
     if (apiError?.message) {
       return apiError.message
@@ -50,7 +95,7 @@ export function handleApiError(error: unknown): string {
 
     // HTTP 상태 코드 기반 메시지
     if (error.response?.status) {
-      return getDefaultErrorMessage(error.response.status)
+      return getDefaultErrorMessage(error.response.status, requestUrl)
     }
 
     // 네트워크 에러

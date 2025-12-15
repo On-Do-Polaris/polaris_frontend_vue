@@ -1,41 +1,58 @@
 import apiClient from './client'
 import type {
-  RegisterRequest,
   LoginRequest,
   LoginResponse,
-  RefreshTokenRequest
+  RegisterRequest,
+  RegisterEmailRequest,
+  VerifyCodeRequest,
+  RefreshTokenRequest,
+  PasswordResetEmailRequest,
+  PasswordResetVerifyCodeRequest,
+  PasswordResetCompleteRequest
 } from './types'
 
 export const authAPI = {
-  /**
-   * 회원가입
-   */
-  register: async (data: RegisterRequest): Promise<{ userId: string }> => {
-    const response = await apiClient.post('/api/auth/register', data)
-    return response.data
-  },
-
-  /**
-   * 로그인
-   */
   login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>('/api/auth/login', data)
+    const response = await apiClient.post<{ result: string; message: string; data: LoginResponse }>('/api/auth/login', data)
+    return response.data.data
+  },
+
+  register: async (data: RegisterRequest): Promise<{ result: string; message: string }> => {
+    const response = await apiClient.post<{ result: string; message: string }>('/api/auth/register', data)
     return response.data
   },
 
-  /**
-   * 로그아웃
-   */
-  logout: async (): Promise<{ message: string }> => {
-    const response = await apiClient.post('/api/auth/logout')
+  registerEmail: async (data: RegisterEmailRequest): Promise<{ result: string; message: string }> => {
+    const response = await apiClient.post<{ result: string; message: string }>('/api/auth/register-email', data)
     return response.data
   },
 
-  /**
-   * 토큰 갱신
-   */
+  verifyCode: async (data: VerifyCodeRequest): Promise<{ result: string; message: string }> => {
+    const response = await apiClient.post<{ result: string; message: string }>('/api/auth/register-verificationCode', data)
+    return response.data
+  },
+
+  logout: async (): Promise<void> => {
+    await apiClient.post('/api/auth/logout')
+  },
+
   refresh: async (data: RefreshTokenRequest): Promise<LoginResponse> => {
     const response = await apiClient.post<LoginResponse>('/api/auth/refresh', data)
+    return response.data
+  },
+
+  sendPasswordResetEmail: async (data: PasswordResetEmailRequest): Promise<{ result: string; message: string }> => {
+    const response = await apiClient.post<{ result: string; message: string }>('/api/auth/password/reset-email', data)
+    return response.data
+  },
+
+  verifyPasswordResetCode: async (data: PasswordResetVerifyCodeRequest): Promise<{ result: string; message: string }> => {
+    const response = await apiClient.post<{ result: string; message: string }>('/api/auth/password/reset-verify', data)
+    return response.data
+  },
+
+  completePasswordReset: async (data: PasswordResetCompleteRequest): Promise<{ result: string; message: string }> => {
+    const response = await apiClient.post<{ result: string; message: string }>('/api/auth/password/reset-complete', data)
     return response.data
   }
 }

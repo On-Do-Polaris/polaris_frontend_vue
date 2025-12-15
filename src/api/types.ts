@@ -1,30 +1,23 @@
-// ============================================================================
-// 공통 타입
-// ============================================================================
+// src/api/types.ts
 
-export interface ApiResponse<T> {
-  data: T
-  status: number
-  message?: string
-}
-
+// 공통 에러 타입
 export interface ApiError {
-  timestamp: string
-  status: number
-  error: string
+  timestamp?: string
+  status?: number
+  error?: string
   message: string
-  path: string
+  path?: string
 }
 
 // ============================================================================
-// 인증 관련 타입
+// 1. 인증 (Auth) & 사용자 (User)
 // ============================================================================
 
 export interface RegisterRequest {
   email: string
   name: string
   password: string
-  verificationCode?: string | null
+  verificationCode?: string
 }
 
 export interface LoginRequest {
@@ -36,55 +29,83 @@ export interface LoginResponse {
   accessToken: string
   refreshToken: string
   userId: string
-  name: string
-  expiresIn: number
 }
 
 export interface RefreshTokenRequest {
   refreshToken: string
 }
 
-// ============================================================================
-// 사용자 관련 타입
-// ============================================================================
-
-export interface User {
-  id: string
+export interface PasswordResetEmailRequest {
   email: string
-  name: string
-  createdAt: string
-  updatedAt: string
 }
 
-export interface UserResponse {
-  id: string
+export interface PasswordResetVerifyCodeRequest {
   email: string
-  name: string
+  code: string
 }
 
-export interface UpdateUserRequest {
-  name?: string
-  email?: string
-}
-
-export interface ChangePasswordRequest {
-  currentPassword: string
+export interface PasswordResetCompleteRequest {
+  email: string
   newPassword: string
 }
 
-// ============================================================================
-// 사업장 관련 타입
-// ============================================================================
-
-export interface Site {
-  siteId: string
-  siteName: string
-  location: string
-  siteType: string
+export interface RegisterEmailRequest {
+  email: string
 }
 
-export interface SiteListResponse {
-  sites: Site[]
+export interface VerifyCodeRequest {
+  email: string
+  verificationCode: string
+}
+
+export interface UserResponse {
+  email: string
+  name: string
+  language: 'ko' | 'en'
+}
+
+export interface UpdateUserRequest {
+  language?: 'ko' | 'en'
+}
+
+// ============================================================================
+// 2. 메타데이터 (Meta)
+// ============================================================================
+
+export interface Industry {
+  id: number
+  code: string
+  name: string
+  description?: string
+}
+
+export interface HazardType {
+  id: number
+  code: string
+  name: string
+  nameEn?: string
+  category: 'TEMPERATURE' | 'WATER' | 'WIND' | 'OTHER'
+  description?: string
+}
+
+// ============================================================================
+// 3. 사업장 (Site)
+// ============================================================================
+
+export interface SiteResponse {
+  sites: SiteInfo[]
+}
+
+export interface SiteInfo {
+  siteId: string
+  siteName: string
+  latitude: number
+  longitude: number
+  jibunAddress?: string
+  roadAddress?: string
+  siteType: string
+  // 프론트엔드 호환성을 위한 추가 필드
+  location?: string
 }
 
 export interface CreateSiteRequest {
@@ -92,29 +113,52 @@ export interface CreateSiteRequest {
   location: string
   address: string
   type: string
+  latitude?: number
+  longitude?: number
+  roadAddress?: string
+  jibunAddress?: string
 }
 
 export interface UpdateSiteRequest {
   name?: string
-  location?: string
-  address?: string
+  roadAddress?: string
+  jibunAddress?: string
+  latitude?: number
+  longitude?: number
   type?: string
 }
 
 // ============================================================================
-// 대시보드 관련 타입
+// 4. 대시보드 (Dashboard)
 // ============================================================================
 
-export interface DashboardSummary {
-  totalSites: number
-  analyzedSites: number
-  highRiskSites: number
-  recentAnalysisCount: number
+export interface DashboardSummaryResponse {
+  mainClimateRisk: string
+  sites: SiteSummary[]
+}
+
+export interface SiteSummary {
+  siteId: string
+  siteName: string
+  siteType: string
+  jibunAddress: string
+  roadAddress: string
+  latitude: number
+  longitude: number
+  totalRiskScore: number
 }
 
 // ============================================================================
-// 분석 관련 타입
+// 5. 분석 (Analysis)
 // ============================================================================
+
+export interface AnalysisSummaryResponse {
+  mainClimateRisk: string
+  mainClimateRiskScore: number
+  mainClimateRiskAAL: number
+  'physical-risk-scores': Record<string, number>
+  'aal-scores': Record<string, number>
+}
 
 export interface StartAnalysisRequest {
   latitude: number
@@ -125,211 +169,384 @@ export interface StartAnalysisRequest {
 export interface AnalysisJobStatusResponse {
   jobId: string
   siteId: string
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
-  progress: number
-  message: string
-  startedAt: string
-  completedAt?: string
-}
-
-export interface PhysicalRiskScore {
-  hazardType: string
-  hazardName: string
-  score: number
-  level: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
-  description: string
-}
-
-export interface PhysicalRiskScoreResponse {
-  siteId: string
-  siteName: string
-  totalScore: number
-  riskLevel: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
-  scores: PhysicalRiskScore[]
-  analyzedAt: string
-}
-
-export interface PastEvent {
-  eventId: string
-  eventType: string
-  eventName: string
-  date: string
-  severity: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
-  damage: number
-  casualties: number
-  description: string
-}
-
-export interface PastEventsResponse {
-  siteId: string
-  siteName: string
-  events: PastEvent[]
-  totalEvents: number
-}
-
-export interface FinancialImpact {
-  hazardType: string
-  expectedLoss: number
-  probability: number
-  annualizedLoss: number
-  description: string
-}
-
-export interface FinancialImpactResponse {
-  siteId: string
-  siteName: string
-  totalExpectedLoss: number
-  totalAnnualizedLoss: number
-  impacts: FinancialImpact[]
-}
-
-export interface VulnerabilityFactor {
-  factor: string
-  score: number
-  level: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
-  description: string
-  recommendations: string[]
-}
-
-export interface VulnerabilityResponse {
-  siteId: string
-  siteName: string
-  overallVulnerability: number
-  vulnerabilityLevel: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
-  factors: VulnerabilityFactor[]
-}
-
-export interface AnalysisTotalResponse {
-  siteId: string
-  siteName: string
-  hazardType: string
-  riskScore: PhysicalRiskScore
-  pastEvents: PastEvent[]
-  financialImpact: FinancialImpact
-  vulnerability: VulnerabilityFactor[]
-  recommendations: string[]
-}
-
-// ============================================================================
-// 시뮬레이션 관련 타입
-// ============================================================================
-
-export interface RelocationCandidate {
-  location: string
-  address: string
-  latitude: number
-  longitude: number
-}
-
-export interface RelocationSimulationRequest {
-  currentSiteId: string
-  candidates: RelocationCandidate[]
-}
-
-export interface RelocationSiteComparison {
-  location: string
-  address: string
-  latitude: number
-  longitude: number
-  overallRiskScore: number
-  riskLevel: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
-  hazardScores: PhysicalRiskScore[]
-  estimatedCost: number
-  recommendation: string
-}
-
-export interface RelocationSimulationResponse {
-  currentSite: RelocationSiteComparison
-  candidates: RelocationSiteComparison[]
-  bestCandidate: RelocationSiteComparison
-  analysis: string
-}
-
-export interface ClimateSimulationRequest {
-  siteId: string
-  scenario: 'SSP1-2.6' | 'SSP2-4.5' | 'SSP5-8.5'
-  targetYear: number
-  hazardTypes?: string[]
-}
-
-export interface ClimateProjection {
-  year: number
-  scenario: string
-  hazardType: string
-  currentScore: number
-  projectedScore: number
-  change: number
-  changePercent: number
-}
-
-export interface ClimateSimulationResponse {
-  siteId: string
-  siteName: string
-  scenario: string
-  targetYear: number
-  projections: ClimateProjection[]
-  summary: string
-  recommendations: string[]
-}
-
-// ============================================================================
-// 리포트 관련 타입
-// ============================================================================
-
-export interface CreateReportRequest {
-  siteId: string
-  reportType: 'FULL' | 'SUMMARY' | 'EXECUTIVE'
-  includeCharts: boolean
-  includeRecommendations: boolean
-}
-
-export interface ReportWebViewResponse {
-  reportId: string
-  siteId: string
-  siteName: string
-  generatedAt: string
-  content: {
-    summary: string
-    riskScores: PhysicalRiskScore[]
-    pastEvents: PastEvent[]
-    financialImpacts: FinancialImpact[]
-    vulnerability: VulnerabilityFactor[]
-    recommendations: string[]
+  status: 'queued' | 'running' | 'completed' | 'failed'
+  currentNode?: string
+  error?: {
+    code: string
+    message: string
   }
 }
 
-export interface ReportPdfResponse {
-  reportId: string
+// 물리적 리스크 점수 (SSP 시나리오별)
+export interface PhysicalRiskScoreResponse {
+  scenarios: SSPScenarioScore[]
+}
+
+export interface SSPScenarioScore {
+  scenario: string
+  riskType: string
+  shortTerm: ShortTermScore
+  midTerm: MidTermScore
+  longTerm: LongTermScore
+}
+
+export interface ShortTermScore { q1: number; q2: number; q3: number; q4: number }
+export interface MidTermScore { year2026: number; year2027: number; year2028: number; year2029: number; year2030: number }
+export interface LongTermScore { year2020s: number; year2030s: number; year2040s: number; year2050s: number }
+
+// SSP 물리적 리스크 (신규 API 응답)
+export interface PhysicalRiskResponse {
+  siteId: string
+  term: string
+  hazardType: string
+  scenarios1?: SSPScenarioData
+  scenarios2?: SSPScenarioData
+  scenarios3?: SSPScenarioData
+  scenarios4?: SSPScenarioData
+  Strategy?: string
+  reason?: string
+}
+
+export interface SSPScenarioData {
+  // 단기 (short): 2026
+  '2026'?: number
+
+  // 중기 (mid): 2026-2030
+  '2027'?: number
+  '2028'?: number
+  '2029'?: number
+  '2030'?: number
+
+  // 장기 (long): 2020s-2050s
+  '2020s'?: number
+  '2030s'?: number
+  '2040s'?: number
+  '2050s'?: number
+}
+
+// 통합 분석
+export interface AnalysisTotalResponse {
   siteId: string
   siteName: string
+  physicalRisks: PhysicalRiskDetail[]
+}
+
+export interface PhysicalRiskDetail {
+  riskType: string
+  riskScore: number
+  financialLossRate: number
+}
+
+// 재무 영향
+export interface FinancialImpactResponse {
+  scenarios: SSPScenarioImpact[]
+}
+
+export interface SSPScenarioImpact {
+  scenario: string
+  riskType: string
+  shortTerm: ShortTermAAL
+  midTerm: MidTermAAL
+  longTerm: LongTermAAL
+}
+// AAL 값 (구조는 Score와 동일하나 의미가 다름)
+export interface ShortTermAAL { q1: number; q2: number; q3: number; q4: number }
+export interface MidTermAAL { year2026: number; year2027: number; year2028: number; year2029: number; year2030: number }
+export interface LongTermAAL { year2020s: number; year2030s: number; year2040s: number; year2050s: number }
+
+// 취약성
+export interface VulnerabilityResponse {
+  siteId: string
+  vulnerabilities: RiskVulnerability[]
+}
+export interface RiskVulnerability {
+  riskType: string
+  vulnerabilityScore: number
+}
+
+// 취약성 분석 (새 엔드포인트)
+export interface VulnerabilityAnalysisResponse {
+  siteId: string
+  siteName: string
+  latitude: number
+  longitude: number
+  jibunAddress: string
+  roadAddress: string
+  siteType: string
+  useAprDay?: string
+  area: number
+  grndflrCnt: number
+  ugrnFlrCnt: number
+  rserthqkDsgnApplyYn: 'Y' | 'N'
+  aisummry: string
+}
+
+// 과거 재난
+export interface PastEventsResponse {
+  siteId: string
+  siteName: string
+  disasters: DisasterEvent[]
+}
+export interface DisasterEvent {
+  disasterType: string
+  year: number
+  warningDays: number
+  severeDays: number
+  overallStatus: '경미' | '주의' | '심각'
+}
+
+// ============================================================================
+// 6. 리포트 (Report)
+// ============================================================================
+
+export interface CreateReportRequest {
+  siteId?: string // null이면 전체
+}
+
+export interface ReportWebViewResponse {
+  siteId?: string
+  pages: ReportPage[]
+}
+
+export interface ReportPage {
+  pageNumber: number
+  imageUrl: string
+  title: string
+}
+
+export interface ReportPdfResponse {
   downloadUrl: string
-  expiresAt: string
   fileSize: number
-  generatedAt: string
+  expiresAt: string
 }
 
 // ============================================================================
-// 메타데이터 타입
+// 7. 시뮬레이션 (Simulation)
 // ============================================================================
 
-export interface HazardType {
-  id: string
-  code: string
-  name: string
-  description: string
-  severity: string
+export interface RelocationSimulationRequest {
+  siteId: string
+  candidate: {
+    latitude: number
+    longitude: number
+    jibunAddress: string
+    roadAddress: string
+  }
 }
 
-export interface Industry {
-  id: string
-  code: string
-  name: string
+export interface RelocationSimulationResponse {
+  siteId: string
+  candidate: {
+    candidateId: string
+    latitude: number
+    longitude: number
+    jibunAddress: string
+    roadAddress: string
+    riskscore: number
+    aalscore: number
+    'physical-risk-scores': Record<string, number>
+    'aal-scores': Record<string, number>
+    pros: string
+    cons: string
+  }
+}
+
+// 위치 시뮬레이션 추천 후보지
+export interface LocationRecommendationResponse {
+  site: {
+    siteId: string
+    candidate1: CandidateLocation
+    candidate2: CandidateLocation
+    candidate3: CandidateLocation
+  }
+}
+
+export interface CandidateLocation {
+  candidateId: string
+  candidateName: string
+  latitude: number
+  longitude: number
+  jibunAddress?: string
+  roadAddress: string
+  riskscore: number
+  aalscore: number
+  'physical-risk-scores': Record<string, number>
+  'aal-scores': Record<string, number>
+  pros: string
+  cons: string
+}
+
+export interface ClimateSimulationRequest {
+  scenario: 'SSP1-2.6' | 'SSP2-4.5' | 'SSP3-7.0' | 'SSP5-8.5'
+  hazardType: string
+}
+
+export interface ClimateSimulationResponse {
+  scenario: string
+  hazardType: string
+  regionScores: Record<string, Record<string, number>> // { "11010": { "2025": 45.2, ... } }
+  sites: SiteClimateData[]
+}
+
+export interface SiteClimateData {
+  siteId: string
+  siteName: string
+  regionCode: string
+  aalByYear: Record<string, number> // { "2025": 12.5, "2026": 13.1, ... }
+}
+
+// ============================================================================
+// 8. 후보지 추천 (Recommendation)
+// ============================================================================
+
+export interface CandidateLocation {
+  roadAddress: string
+  jibunAddress?: string
+  latitude: number
+  longitude: number
+}
+
+export interface RecommendationCriteria {
+  hazardWeights?: Record<string, number>
+  excludedHazards?: string[]
+  minRiskScore?: number
+  maxRiskScore?: number
+}
+
+export interface SiteRecommendationBatchRequest {
+  jobName: string
+  siteType: string
+  candidates: CandidateLocation[]
+  criteria?: RecommendationCriteria
+  referenceSiteId?: string
+}
+
+export interface SiteRecommendationBatchResponse {
+  batchJobId: string
+  jobName: string
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+  createdAt: string
+}
+
+export interface BatchJobProgressResponse {
+  batchJobId: string
+  jobName: string
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+  totalCandidates: number
+  processedCandidates: number
+  progressPercent: number
+  createdAt: string
+  updatedAt: string
+  errorMessage?: string
+}
+
+export interface RecommendationResultItem {
+  roadAddress: string
+  jibunAddress?: string
+  latitude: number
+  longitude: number
+  totalRiskScore: number
+  rankScore: number
+  hazardScores: Record<string, number>
+}
+
+export interface SiteRecommendationBatchResultResponse {
+  batchJobId: string
+  jobName: string
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+  results: RecommendationResultItem[]
+  topRecommendations: RecommendationResultItem[]
+  createdAt: string
+  completedAt?: string
+}
+
+// ============================================================================
+// 9. 추가 데이터 관리 (Additional Data)
+// ============================================================================
+
+export interface AdditionalDataInput {
+  category: 'building' | 'asset' | 'power' | 'insurance' | 'custom'
+  rawText?: string
+  structuredData?: Record<string, any>
+  fileName?: string
+  fileS3Key?: string
+}
+
+export interface AdditionalDataItem {
+  dataId: string
+  category: 'building' | 'asset' | 'power' | 'insurance' | 'custom'
+  rawText?: string
+  structuredData?: Record<string, any>
+  fileName?: string
+  fileS3Key?: string
+  uploadedAt: string
+}
+
+export interface AdditionalDataListResponse {
+  siteId: string
+  dataList: AdditionalDataItem[]
+}
+
+export interface StructuredDataResponse {
+  dataId: string
   category: string
-  description: string
+  structuredData: Record<string, any>
+  extractedAt: string
 }
 
-export interface SspScenario {
-  code: string
-  name: string
-  description: string
+// ============================================================================
+// 10. 재해 이력 (Disaster History)
+// ============================================================================
+
+export type DisasterType = 'TYPHOON' | 'HEAVY_RAIN' | 'HEAVY_SNOW' | 'STRONG_WIND' | 'WIND_WAVE' | 'EARTHQUAKE' | 'OTHER'
+export type DamageSeverity = 'MINOR' | 'MODERATE' | 'SEVERE' | 'CATASTROPHIC'
+
+export interface DisasterHistoryItem {
+  id: string
+  disasterType: DisasterType
+  year: number
+  month?: number
+  administrativeCode: string
+  administrativeName: string
+  damageDescription?: string
+  damageSeverity?: DamageSeverity
+  humanCasualties?: number
+  propertyDamage?: number
+}
+
+export interface DisasterHistoryQueryParams {
+  administrativeCode?: string
+  year?: number
+  disasterType?: DisasterType
+  page?: number
+  size?: number
+}
+
+export interface DisasterHistoryResponse {
+  content: DisasterHistoryItem[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+// 과거 재해 이력 조회 (/api/past)
+export interface PastDisasterQueryParams {
+  year?: string
+  disaster_type?: string
+  severity?: string
+}
+
+export interface PastDisasterItem {
+  id: number
+  date: string
+  disaster_type: string
+  severity: string
+  region: string[]
+}
+
+export interface PastDisasterResponse {
+  data: {
+    items: PastDisasterItem[]
+  }
 }

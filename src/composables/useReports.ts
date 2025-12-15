@@ -1,14 +1,16 @@
 import { ref, type Ref } from 'vue'
-import { reportAPI } from '@/api'
+import { reportsAPI } from '@/api'
 import type {
   CreateReportRequest,
   ReportWebViewResponse,
   ReportPdfResponse
 } from '@/api/types'
+import { processError } from '@/utils/errorHandler'
+import { toast } from 'vue-sonner'
 
 export function useReports() {
   const loading = ref(false)
-  const error: Ref<Error | null> = ref(null)
+  const error: Ref<string | null> = ref(null)
   const reportWebView: Ref<ReportWebViewResponse | null> = ref(null)
   const reportPdf: Ref<ReportPdfResponse | null> = ref(null)
   const reportId: Ref<string | null> = ref(null)
@@ -16,17 +18,18 @@ export function useReports() {
   /**
    * 리포트 생성
    */
-  const createReport = async (data: CreateReportRequest): Promise<{ reportId: string }> => {
+  const createReport = async (data: CreateReportRequest): Promise<void> => {
     loading.value = true
     error.value = null
 
     try {
-      const result = await reportAPI.createReport(data)
-      reportId.value = result.reportId
-      return result
+      await reportsAPI.createReport(data)
+      // 리포트 생성 완료 (ID를 반환하지 않음)
+      toast.success('리포트 생성 요청이 완료되었습니다.')
     } catch (err) {
-      error.value = err as Error
-      console.error('리포트 생성 실패:', err)
+      const errorMessage = processError('리포트 생성', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -41,12 +44,13 @@ export function useReports() {
     error.value = null
 
     try {
-      const result = await reportAPI.getReportWebView()
+      const result = await reportsAPI.getWebView()
       reportWebView.value = result
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('리포트 웹 뷰 조회 실패:', err)
+      const errorMessage = processError('리포트 웹 뷰 조회', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -61,12 +65,13 @@ export function useReports() {
     error.value = null
 
     try {
-      const result = await reportAPI.getReportPdf()
+      const result = await reportsAPI.getPdf()
       reportPdf.value = result
       return result
     } catch (err) {
-      error.value = err as Error
-      console.error('리포트 PDF 조회 실패:', err)
+      const errorMessage = processError('리포트 PDF 조회', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -76,20 +81,21 @@ export function useReports() {
   /**
    * 리포트 삭제
    */
-  const deleteReport = async (): Promise<{ message: string }> => {
+  const deleteReport = async (): Promise<void> => {
     loading.value = true
     error.value = null
 
     try {
-      const result = await reportAPI.deleteReport()
+      await reportsAPI.deleteReport()
       // 삭제 후 상태 초기화
       reportWebView.value = null
       reportPdf.value = null
       reportId.value = null
-      return result
+      toast.success('리포트가 삭제되었습니다.')
     } catch (err) {
-      error.value = err as Error
-      console.error('리포트 삭제 실패:', err)
+      const errorMessage = processError('리포트 삭제', err)
+      error.value = errorMessage
+      toast.error(errorMessage)
       throw err
     } finally {
       loading.value = false
@@ -105,7 +111,8 @@ export function useReports() {
       // 브라우저에서 다운로드 URL 열기
       window.open(pdfInfo.downloadUrl, '_blank')
     } catch (err) {
-      console.error('PDF 다운로드 실패:', err)
+      const errorMessage = processError('PDF 다운로드', err)
+      toast.error(errorMessage)
       throw err
     }
   }

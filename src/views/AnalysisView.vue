@@ -5,7 +5,6 @@ import { useUiStore } from '@/store/ui'
 import { ChevronDown, AlertTriangle } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import AnalysisOverviewTab from '@/components/analysis/AnalysisOverviewTab.vue'
-import AnalysisDisasterTab from '@/components/analysis/AnalysisDisasterTab.vue'
 import AnalysisSSPTab from '@/components/analysis/AnalysisSSPTab.vue'
 import AnalysisFinancialTab from '@/components/analysis/AnalysisFinancialTab.vue'
 import AnalysisVulnerabilityTab from '@/components/analysis/AnalysisVulnerabilityTab.vue'
@@ -20,15 +19,21 @@ const selectedSiteId = ref(uiStore.selectedSiteId || '')
 const activeTab = ref('overview')
 
 // 컴포넌트 마운트 시 사업장 목록 로드
-onMounted(() => {
+onMounted(async () => {
   if (sitesStore.allSites.length === 0) {
-    sitesStore.fetchSites()
+    await sitesStore.fetchSites()
+  }
+  // 선택된 사업장이 없으면 첫 번째 사업장으로 자동 선택
+  if (!selectedSiteId.value && sitesStore.allSites.length > 0) {
+    const firstSite = sitesStore.allSites[0]
+    if (firstSite) {
+      selectedSiteId.value = firstSite.siteId
+    }
   }
 })
 
 const tabs = [
   { id: 'overview', label: '개요' },
-  { id: 'disaster', label: '과거재난' },
   { id: 'ssp', label: 'SSP' },
   { id: 'financial', label: '재무 영향' },
   { id: 'vulnerability', label: '취약성' }
@@ -52,7 +57,7 @@ const goToDashboard = () => {
 </script>
 
 <template>
-  <div class="bg-white">
+  <div class="bg-white min-h-full">
     <!-- 선택된 사업장이 없을 때 -->
     <div
       v-if="!selectedSiteId || !currentSite"
@@ -89,7 +94,7 @@ const goToDashboard = () => {
           <div class="relative">
             <select
               v-model="selectedSiteId"
-              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer min-w-[200px]"
+              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
             >
               <option v-for="site in sites" :key="site.siteId" :value="site.siteId">
                 {{ site.siteName }}
@@ -128,7 +133,6 @@ const goToDashboard = () => {
         <!-- Tab Content -->
         <div class="mt-6">
           <AnalysisOverviewTab v-if="activeTab === 'overview'" :site-id="selectedSiteId" />
-          <AnalysisDisasterTab v-if="activeTab === 'disaster'" :site-id="selectedSiteId" />
           <AnalysisSSPTab v-if="activeTab === 'ssp'" :site-id="selectedSiteId" />
           <AnalysisFinancialTab v-if="activeTab === 'financial'" :site-id="selectedSiteId" />
           <AnalysisVulnerabilityTab
