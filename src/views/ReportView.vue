@@ -1,14 +1,40 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Loader2, Upload, ChevronDown } from 'lucide-vue-next'
+import { Loader2, Upload, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { useSitesStore } from '@/store/sites'
 import { reportsAPI } from '@/api/reports'
 import { analysisAPI } from '@/api/analysis'
 import { toast } from 'vue-sonner'
+import apiClient from '@/api/client'
 
 console.log('[ReportView] Component loaded')
 
 const sitesStore = useSitesStore()
+
+// 보고서 타입 정의
+interface ReportBlock {
+  type: 'text' | 'table'
+  subheading?: string
+  content?: string
+  title?: string
+  headers?: Array<{ text: string; value: string }>
+  items?: Array<Record<string, { value: string; bg_color: string } | string>>
+  legend?: Array<{ color: string; label: string }>
+}
+
+interface ReportSection {
+  section_id: string
+  title: string
+  blocks: ReportBlock[]
+}
+
+interface ReportData {
+  report_id: string
+  meta: {
+    title: string
+  }
+  sections: ReportSection[]
+}
 
 // 추가 데이터 등록 팝업
 const showAdditionalDataDialog = ref(false)
@@ -21,11 +47,45 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 // 분석 진행 상태
 const isAnalyzing = ref(false)
 
+// 보고서 데이터
+const reportData = ref<ReportData | null>(null)
+
 // 현재 활성화된 섹션
-const activeSection = ref('governance')
+const activeSection = ref('')
 
 // Intersection Observer
 let observer: IntersectionObserver | null = null
+
+// 보고서 데이터 가져오기
+const fetchReportData = async () => {
+  try {
+    console.log('보고서 데이터 로드 시작...')
+    const response = await apiClient.get('/report')
+    console.log('보고서 데이터 전체 응답:', response.data)
+
+    // API 응답이 { result: 'success', data: {...} } 형태인 경우
+    if (response.data.data) {
+      reportData.value = response.data.data
+    } else {
+      reportData.value = response.data
+    }
+
+    console.log('파싱된 보고서 데이터:', reportData.value)
+
+    // 첫 번째 섹션을 활성화
+    if (
+      reportData.value?.sections &&
+      Array.isArray(reportData.value.sections) &&
+      reportData.value.sections.length > 0
+    ) {
+      activeSection.value = reportData.value.sections[0]?.section_id || ''
+      console.log('첫 번째 섹션 활성화:', activeSection.value)
+    }
+  } catch (error) {
+    console.error('보고서 데이터 로드 실패:', error)
+    toast.error('보고서 데이터를 불러오는데 실패했습니다')
+  }
+}
 
 // 사업장 목록 로드 및 팝업 표시
 onMounted(async () => {
@@ -33,34 +93,42 @@ onMounted(async () => {
     await sitesStore.fetchSites()
   }
 
+  // 스크롤 이벤트 리스너 등록
+  window.addEventListener('scroll', handleScroll)
+
   // 분석 상태 확인
   try {
     const statusResponse = await analysisAPI.getOverallAnalysisStatus()
-    if (statusResponse.data.status === 'ing') {
+    const status = statusResponse.data.status
+
+    console.log('분석 상태:', status)
+
+    if (status === 'ing') {
       // 분석 진행 중이면 로딩 화면 표시
       isAnalyzing.value = true
       return // 팝업 표시하지 않음
     }
-    if (statusResponse.data.status === 'done-a') {
-      // done-a 상태면 팝업 표시하지 않음
-      return
+
+    // ing가 아니면 보고서 데이터 로드
+    await fetchReportData()
+    setupIntersectionObserver()
+
+    // done 상태면 추가 데이터 등록 팝업 표시
+    if (status === 'done') {
+      showAdditionalDataDialog.value = true
     }
+    // done-a 상태면 팝업 표시하지 않음
   } catch (error) {
     console.error('분석 상태 확인 실패:', error)
     // 에러 시 무시하고 계속 진행
   }
-
-  // done 상태일 때만 페이지 진입 시 추가 데이터 등록 팝업 자동 표시
-  showAdditionalDataDialog.value = true
-
-  // Intersection Observer 설정
-  setupIntersectionObserver()
 })
 
 onUnmounted(() => {
   if (observer) {
     observer.disconnect()
   }
+  window.removeEventListener('scroll', handleScroll)
 })
 
 // Intersection Observer 설정
@@ -79,34 +147,27 @@ const setupIntersectionObserver = () => {
     })
   }, options)
 
-  // 모든 섹션 관찰
-  const sections = [
-    'governance',
-    'governance-1',
-    'governance-2',
-    'strategy',
-    'strategy-1',
-    'strategy-2',
-    'strategy-3',
-    'risk-management',
-    'risk-management-1',
-    'risk-management-2',
-    'risk-management-3',
-    'metrics',
-    'metrics-1',
-    'metrics-2',
-    'appendix',
-    'appendix-1',
-    'appendix-2',
-    'appendix-3',
-  ]
+  // 모든 섹션 관찰 (동적으로 생성된 섹션들)
+  setTimeout(() => {
+    if (!reportData.value?.sections) return
 
-  sections.forEach((sectionId) => {
-    const element = document.getElementById(sectionId)
-    if (element) {
-      observer?.observe(element)
-    }
-  })
+    reportData.value.sections.forEach((section) => {
+      const element = document.getElementById(section.section_id)
+      if (element) {
+        observer?.observe(element)
+      }
+
+      // subheading도 관찰
+      section.blocks.forEach((block, index) => {
+        if (block.subheading) {
+          const subElement = document.getElementById(`${section.section_id}-${index}`)
+          if (subElement) {
+            observer?.observe(subElement)
+          }
+        }
+      })
+    })
+  }, 100)
 }
 
 // 팝업 닫기
@@ -206,6 +267,12 @@ const handleComplete = async () => {
     await analysisAPI.startAllSitesAnalysis(siteIds)
 
     toast.success('데이터 분석을 시작했습니다')
+
+    setTimeout(async () => {
+      await fetchReportData()
+      isAnalyzing.value = false
+      setupIntersectionObserver()
+    }, 2000)
   } catch (error) {
     console.error('분석 시작 실패:', error)
     toast.error('분석 시작에 실패했습니다')
@@ -219,6 +286,69 @@ const scrollToSection = (sectionId: string) => {
   const element = document.getElementById(sectionId)
   if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
+
+// 테이블 셀 값 가져오기
+const getCellValue = (cellData: any): string => {
+  if (typeof cellData === 'string') {
+    return cellData
+  }
+  if (cellData && typeof cellData === 'object' && 'value' in cellData) {
+    return cellData.value
+  }
+  return ''
+}
+
+// 테이블 셀 배경색 클래스 가져오기
+const getCellBgColor = (cellData: any): string => {
+  if (cellData && typeof cellData === 'object' && 'bg_color' in cellData) {
+    const color = cellData.bg_color
+    switch (color) {
+      case 'green':
+        return 'bg-green-100 text-green-800'
+      case 'yellow':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'orange':
+        return 'bg-orange-100 text-orange-800'
+      case 'red':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'text-gray-700'
+    }
+  }
+  return 'text-gray-700'
+}
+
+// 범례 색상 클래스 가져오기
+const getLegendColorClass = (color: string): string => {
+  switch (color) {
+    case 'green':
+      return 'bg-green-500'
+    case 'yellow':
+      return 'bg-yellow-500'
+    case 'orange':
+      return 'bg-orange-500'
+    case 'red':
+      return 'bg-red-500'
+    default:
+      return 'bg-gray-500'
+  }
+}
+
+// 스크롤 투 탑 버튼 표시 여부
+const showScrollTop = ref(false)
+
+// 스크롤 이벤트 리스너
+const handleScroll = () => {
+  showScrollTop.value = window.scrollY > 300
+}
+
+// 페이지 맨 위로 스크롤
+const scrollToTop = () => {
+  const topElement = document.getElementById('report-top')
+  if (topElement) {
+    topElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 }
 </script>
@@ -315,7 +445,11 @@ const scrollToSection = (sectionId: string) => {
                   class="w-full appearance-none px-4 py-2.5 pr-10 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
                 >
                   <option value="">사업장을 선택해주세요</option>
-                  <option v-for="site in sitesStore.allSites" :key="site.siteId" :value="site.siteId">
+                  <option
+                    v-for="site in sitesStore.allSites"
+                    :key="site.siteId"
+                    :value="site.siteId"
+                  >
                     {{ site.siteName }}
                   </option>
                 </select>
@@ -389,7 +523,7 @@ const scrollToSection = (sectionId: string) => {
     </div>
 
     <!-- 상단 헤더 -->
-    <div class="border-b border-gray-200 px-8 py-6 bg-white">
+    <div id="report-top" class="border-b border-gray-200 px-8 py-6 bg-white">
       <div>
         <h2 class="text-gray-900 text-xl">기후변화대응(TCFD) 리포트</h2>
         <p class="text-sm text-gray-600 mt-1">
@@ -412,201 +546,52 @@ const scrollToSection = (sectionId: string) => {
       </div>
     </div>
 
-    <div v-else class="px-8">
+    <!-- 보고서 로딩 중 -->
+    <div v-else-if="!reportData" class="px-8 py-32">
+      <div class="text-center space-y-4">
+        <div class="flex justify-center mb-6">
+          <Loader2 :size="48" class="animate-spin text-[#EA002C]" />
+        </div>
+        <p class="text-lg text-gray-800">보고서를 불러오는 중입니다...</p>
+      </div>
+    </div>
+
+    <!-- 보고서 내용 표시 -->
+    <div v-else class="px-15">
       <!-- 2열 레이아웃 -->
       <div class="flex">
         <!-- 왼쪽 목차 -->
-        <div class="w-64 flex-shrink-0 border-r border-gray-200 pt-6">
+        <div class="w-65 flex-shrink-0 border-r border-gray-200 pt-6 pl-10">
           <div class="sticky top-6">
             <nav class="space-y-1">
-              <!-- Governance -->
-              <div class="mb-4">
+              <!-- 동적 목차 -->
+              <div v-for="section in reportData?.sections" :key="section.section_id" class="mb-4">
                 <button
-                  @click="scrollToSection('governance')"
+                  @click="scrollToSection(section.section_id)"
                   :class="[
                     'block text-sm font-semibold py-2 text-left w-full pr-6',
-                    activeSection === 'governance' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-900 hover:text-[#EA002C]'
+                    activeSection === section.section_id
+                      ? 'text-[#EA002C] border-r-4 border-[#EA002C]'
+                      : 'text-gray-900 hover:text-[#EA002C]',
                   ]"
                 >
-                  Governance
+                  {{ section.title }}
                 </button>
+                <!-- subheading 목차 -->
                 <div class="ml-3 space-y-1">
                   <button
-                    @click="scrollToSection('governance-1')"
+                    v-for="(block, index) in section.blocks"
+                    :key="`${section.section_id}-${index}`"
+                    v-show="block.subheading"
+                    @click="scrollToSection(`${section.section_id}-${index}`)"
                     :class="[
                       'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'governance-1' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
+                      activeSection === `${section.section_id}-${index}`
+                        ? 'text-[#EA002C] border-r-4 border-[#EA002C]'
+                        : 'text-gray-600 hover:text-[#EA002C]',
                     ]"
                   >
-                    이사회의 감독
-                  </button>
-                  <button
-                    @click="scrollToSection('governance-2')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'governance-2' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    경영진의 역할
-                  </button>
-                </div>
-              </div>
-
-              <!-- Strategy -->
-              <div class="mb-4">
-                <button
-                  @click="scrollToSection('strategy')"
-                  :class="[
-                    'block text-sm font-semibold py-2 text-left w-full pr-6',
-                    activeSection === 'strategy' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-900 hover:text-[#EA002C]'
-                  ]"
-                >
-                  Strategy
-                </button>
-                <div class="ml-3 space-y-1">
-                  <button
-                    @click="scrollToSection('strategy-1')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'strategy-1' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    리스크 및 기회 식별
-                  </button>
-                  <button
-                    @click="scrollToSection('strategy-2')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'strategy-2' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    사업 및 재무 영향
-                  </button>
-                  <button
-                    @click="scrollToSection('strategy-3')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'strategy-3' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    주요 리스크별 영향 분석 및 대응 방안
-                  </button>
-                </div>
-              </div>
-
-              <!-- Risk Management -->
-              <div class="mb-4">
-                <button
-                  @click="scrollToSection('risk-management')"
-                  :class="[
-                    'block text-sm font-semibold py-2 text-left w-full pr-6',
-                    activeSection === 'risk-management' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-900 hover:text-[#EA002C]'
-                  ]"
-                >
-                  Risk Management
-                </button>
-                <div class="ml-3 space-y-1">
-                  <button
-                    @click="scrollToSection('risk-management-1')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'risk-management-1' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    리스크 식별 및 평가 프로세스
-                  </button>
-                  <button
-                    @click="scrollToSection('risk-management-2')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'risk-management-2' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    전사적 리스크 관리 체계(ERM) 통합
-                  </button>
-                  <button
-                    @click="scrollToSection('risk-management-3')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'risk-management-3' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    주요 대응 전략
-                  </button>
-                </div>
-              </div>
-
-              <!-- Metrics and Targets -->
-              <div class="mb-4">
-                <button
-                  @click="scrollToSection('metrics')"
-                  :class="[
-                    'block text-sm font-semibold py-2 text-left w-full pr-6',
-                    activeSection === 'metrics' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-900 hover:text-[#EA002C]'
-                  ]"
-                >
-                  Metrics and Targets
-                </button>
-                <div class="ml-3 space-y-1">
-                  <button
-                    @click="scrollToSection('metrics-1')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'metrics-1' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    주요 지표: 연평균 자산 손실률(AAL)
-                  </button>
-                  <button
-                    @click="scrollToSection('metrics-2')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'metrics-2' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    목표 및 이행 계획
-                  </button>
-                </div>
-              </div>
-
-              <!-- Appendix -->
-              <div>
-                <button
-                  @click="scrollToSection('appendix')"
-                  :class="[
-                    'block text-sm font-semibold py-2 text-left w-full pr-6',
-                    activeSection === 'appendix' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-900 hover:text-[#EA002C]'
-                  ]"
-                >
-                  Appendix
-                </button>
-                <div class="ml-3 space-y-1">
-                  <button
-                    @click="scrollToSection('appendix-1')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'appendix-1' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    용어 정의
-                  </button>
-                  <button
-                    @click="scrollToSection('appendix-2')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'appendix-2' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    시나리오 설명
-                  </button>
-                  <button
-                    @click="scrollToSection('appendix-3')"
-                    :class="[
-                      'block text-sm py-1 text-left w-full pr-6',
-                      activeSection === 'appendix-3' ? 'text-[#EA002C] border-r-4 border-[#EA002C]' : 'text-gray-600 hover:text-[#EA002C]'
-                    ]"
-                  >
-                    방법론 상세
+                    {{ block.subheading }}
                   </button>
                 </div>
               </div>
@@ -615,109 +600,125 @@ const scrollToSection = (sectionId: string) => {
         </div>
 
         <!-- 오른쪽 컨텐츠 -->
-        <div class="flex-1 pl-6 pt-6">
+        <div class="flex-1 pl-6 pt-6 pr-12">
           <div class="p-8 space-y-12">
-            <!-- Governance -->
-            <section id="governance">
-              <h2 class="text-2xl font-bold text-gray-900 mb-6">Governance</h2>
+            <!-- 동적 섹션 렌더링 -->
+            <section
+              v-for="section in reportData?.sections"
+              :key="section.section_id"
+              :id="section.section_id"
+            >
+              <h2 class="text-2xl font-bold text-gray-900 mb-6">{{ section.title }}</h2>
 
-              <div id="governance-1" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">이사회의 감독</h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
+              <!-- 블록 렌더링 -->
+              <div
+                v-for="(block, index) in section.blocks"
+                :key="`${section.section_id}-${index}`"
+                :id="`${section.section_id}-${index}`"
+                class="mb-8"
+              >
+                <!-- Text 블록 -->
+                <div v-if="block.type === 'text'">
+                  <h3 v-if="block.subheading" class="text-xl font-semibold text-gray-900 mb-4">
+                    {{ block.subheading }}
+                  </h3>
+                  <div class="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {{ block.content }}
+                  </div>
+                </div>
 
-              <div id="governance-2" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">경영진의 역할</h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-            </section>
+                <!-- Table 블록 -->
+                <div v-else-if="block.type === 'table'">
+                  <h3 v-if="block.title" class="text-xl font-semibold text-gray-900 mb-2">
+                    {{ block.title }}
+                  </h3>
+                  <p v-if="block.subheading" class="text-sm text-gray-600 mb-4">
+                    {{ block.subheading }}
+                  </p>
 
-            <!-- Strategy -->
-            <section id="strategy">
-              <h2 class="text-2xl font-bold text-gray-900 mb-6">Strategy</h2>
+                  <!-- 테이블 -->
+                  <div class="mb-4">
+                    <table
+                      class="w-full"
+                      style="
+                        border-top: 1.5px solid rgb(25, 25, 25);
+                        border-bottom: 1.5px solid rgb(25, 25, 25);
+                      "
+                    >
+                      <thead style="background-color: rgb(250, 250, 250)">
+                        <tr class="border-b border-gray-300">
+                          <th
+                            v-for="(header, headerIndex) in block.headers"
+                            :key="header.value"
+                            class="px-4 py-3 text-left text-sm font-medium text-gray-900"
+                            :class="{ 'border-l border-gray-300': headerIndex > 0 }"
+                          >
+                            {{ header.text }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody class="bg-white">
+                        <tr
+                          v-for="(item, itemIndex) in block.items"
+                          :key="itemIndex"
+                          class="border-b border-gray-300 last:border-b-0"
+                        >
+                          <td
+                            v-for="(header, headerIndex) in block.headers"
+                            :key="`${itemIndex}-${header.value}`"
+                            class="px-4 py-3 text-sm"
+                            :class="[
+                              getCellBgColor(item[header.value]),
+                              { 'border-l border-gray-300': headerIndex > 0 },
+                            ]"
+                          >
+                            {{ getCellValue(item[header.value]) }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
 
-              <div id="strategy-1" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">리스크 및 기회 식별</h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-
-              <div id="strategy-2" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">사업 및 재무 영향</h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-
-              <div id="strategy-3" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">
-                  주요 리스크별 영향 분석 및 대응 방안
-                </h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-            </section>
-
-            <!-- Risk Management -->
-            <section id="risk-management">
-              <h2 class="text-2xl font-bold text-gray-900 mb-6">Risk Management</h2>
-
-              <div id="risk-management-1" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">
-                  리스크 식별 및 평가 프로세스
-                </h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-
-              <div id="risk-management-2" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">
-                  전사적 리스크 관리 체계(ERM) 통합
-                </h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-
-              <div id="risk-management-3" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">주요 대응 전략</h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-            </section>
-
-            <!-- Metrics and Targets -->
-            <section id="metrics">
-              <h2 class="text-2xl font-bold text-gray-900 mb-6">Metrics and Targets</h2>
-
-              <div id="metrics-1" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">
-                  주요 지표: 연평균 손실(AAL)
-                </h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-
-              <div id="metrics-2" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">목표 및 이행 계획</h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-            </section>
-
-            <!-- Appendix -->
-            <section id="appendix">
-              <h2 class="text-2xl font-bold text-gray-900 mb-6">Appendix</h2>
-
-              <div id="appendix-1" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">용어 정의</h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-
-              <div id="appendix-2" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">시나리오 설명</h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
-              </div>
-
-              <div id="appendix-3" class="mb-8">
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">방법론 상세</h3>
-                <div class="text-gray-700 leading-relaxed">(내용)</div>
+                  <!-- Legend -->
+                  <div v-if="block.legend" class="flex flex-wrap gap-4">
+                    <div
+                      v-for="legendItem in block.legend"
+                      :key="legendItem.color"
+                      class="flex items-center gap-2"
+                    >
+                      <div
+                        class="w-4 h-4 rounded"
+                        :class="getLegendColorClass(legendItem.color)"
+                      ></div>
+                      <span class="text-sm text-gray-600">{{ legendItem.label }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 스크롤 투 탑 버튼 -->
+    <Transition
+      enter-active-class="transition ease-out duration-300"
+      enter-from-class="opacity-0 scale-75"
+      enter-to-class="opacity-100 scale-100"
+      leave-active-class="transition ease-in duration-200"
+      leave-from-class="opacity-100 scale-100"
+      leave-to-class="opacity-0 scale-75"
+    >
+      <button
+        v-if="!isAnalyzing && reportData"
+        @click="scrollToTop"
+        class="fixed bottom-10 right-10 bg-[#EA002C] text-white p-3 rounded-full hover:bg-[#C4002A] hover:scale-110 transition-all duration-300 z-50"
+        aria-label="맨 위로 이동"
+      >
+        <ChevronUp :size="24" :stroke-width="2.5" />
+      </button>
+    </Transition>
   </div>
 </template>
 
