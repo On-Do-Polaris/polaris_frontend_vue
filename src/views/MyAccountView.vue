@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { userAPI } from '@/api/users'
 import type { UserResponse } from '@/api/types'
+import { TokenManager } from '@/utils/tokenManager'
 
 const toast = useToast()
 
@@ -56,14 +57,11 @@ const handleDeleteAccount = async () => {
     // DELETE /api/users/me 요청
     await userAPI.deleteMe()
 
-    // localStorage 정리
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('userId')
-    localStorage.removeItem('userName')
+    // localStorage 정리 (TokenManager 사용)
+    TokenManager.clearAll()
 
     // 삭제 메시지를 sessionStorage에 저장
-    sessionStorage.setItem('logoutMessage', '계정이 삭제되었습니다')
+    TokenManager.safeSessionStorageSet('logoutMessage', '계정이 삭제되었습니다')
 
     // 즉시 로그인 페이지로 완전히 새로고침하며 이동
     window.location.href = '/login'

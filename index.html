@@ -5,6 +5,39 @@
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SKAX-Polaris</title>
+    <!-- 전역 Storage 에러 핸들러 (최우선 로드) -->
+    <script>
+      // 동기 에러 핸들러
+      window.addEventListener('error', function (event) {
+        if (
+          event.error &&
+          event.error.message &&
+          (event.error.message.includes('Access to storage') ||
+            event.error.message.includes('storage is not allowed'))
+        ) {
+          console.warn('[Storage Error] Storage access is blocked by browser settings')
+          console.warn('[Storage Error] App will continue with limited functionality')
+          event.preventDefault()
+        }
+      })
+
+      // Promise rejection 핸들러
+      window.addEventListener('unhandledrejection', function (event) {
+        if (
+          event.reason &&
+          ((event.reason.message &&
+            (event.reason.message.includes('Access to storage') ||
+              event.reason.message.includes('storage is not allowed'))) ||
+            (typeof event.reason === 'string' &&
+              (event.reason.includes('Access to storage') ||
+                event.reason.includes('storage is not allowed'))))
+        ) {
+          console.warn('[Storage Error] Storage access is blocked by browser settings')
+          console.warn('[Storage Error] App will continue with limited functionality')
+          event.preventDefault()
+        }
+      })
+    </script>
     <!-- Daum Postcode API -->
     <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
   </head>

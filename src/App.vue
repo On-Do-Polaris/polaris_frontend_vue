@@ -6,6 +6,7 @@ import Header from '@/components/common/Header.vue'
 import OnboardingModal from '@/components/common/OnboardingModal.vue'
 import { useAuthStore } from './store/auth'
 import { useUiStore } from './store/ui'
+import { TokenManager } from './utils/tokenManager'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
@@ -46,7 +47,7 @@ const handleAuthLogout = () => {
   console.log('[App] Auto logout triggered - Invalid or expired token')
 
   // 토큰 만료 메시지를 sessionStorage에 저장
-  sessionStorage.setItem('logoutMessage', '로그인 시간 만료로 다시 로그인해주세요')
+  TokenManager.safeSessionStorageSet('logoutMessage', '로그인 시간 만료로 다시 로그인해주세요')
 
   // 즉시 로그인 페이지로 리다이렉트
   window.location.replace('/login')

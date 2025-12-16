@@ -27,6 +27,8 @@ export const useAuthStore = defineStore('auth', () => {
     initialRefreshToken = TokenManager.getRefreshToken()
   } catch (error) {
     console.error('[AuthStore] Initialization error:', error)
+    // Storage 접근이 차단된 경우 경고만 표시하고 계속 진행
+    console.warn('[AuthStore] Storage is not accessible, continuing with empty state')
   }
 
   const accessToken = ref<string | null>(initialAccessToken)
@@ -111,7 +113,7 @@ export const useAuthStore = defineStore('auth', () => {
     isFirstLogin.value = false
 
     // 로그아웃 메시지를 sessionStorage에 저장
-    sessionStorage.setItem('logoutMessage', '로그아웃되었습니다')
+    TokenManager.safeSessionStorageSet('logoutMessage', '로그아웃되었습니다')
 
     // 백그라운드에서 로그아웃 API 호출 (기다리지 않음)
     authAPI.logout().catch((error) => {

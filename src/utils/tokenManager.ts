@@ -21,11 +21,35 @@ export class TokenManager {
    */
   private static isStorageAvailable(): boolean {
     try {
+      // localStorage 자체에 접근할 수 있는지 먼저 확인
+      if (typeof localStorage === 'undefined') {
+        return false
+      }
       const test = '__storage_test__'
       localStorage.setItem(test, test)
       localStorage.removeItem(test)
       return true
-    } catch {
+    } catch (error) {
+      // Storage 접근 에러는 조용히 무시
+      return false
+    }
+  }
+
+  /**
+   * sessionStorage 접근 가능 여부 확인
+   */
+  private static isSessionStorageAvailable(): boolean {
+    try {
+      // sessionStorage 자체에 접근할 수 있는지 먼저 확인
+      if (typeof sessionStorage === 'undefined') {
+        return false
+      }
+      const test = '__session_storage_test__'
+      sessionStorage.setItem(test, test)
+      sessionStorage.removeItem(test)
+      return true
+    } catch (error) {
+      // Storage 접근 에러는 조용히 무시
       return false
     }
   }
@@ -155,6 +179,52 @@ export class TokenManager {
    */
   static clearLoggingOutFlag(): void {
     this.safeRemoveItem(this.STORAGE_KEYS.IS_LOGGING_OUT)
+  }
+
+  /**
+   * 안전한 sessionStorage.getItem
+   */
+  static safeSessionStorageGet(key: string): string | null {
+    try {
+      if (!this.isSessionStorageAvailable()) {
+        console.warn('[TokenManager] sessionStorage is not available')
+        return null
+      }
+      return sessionStorage.getItem(key)
+    } catch (error) {
+      console.error('[TokenManager] Error reading from sessionStorage:', error)
+      return null
+    }
+  }
+
+  /**
+   * 안전한 sessionStorage.setItem
+   */
+  static safeSessionStorageSet(key: string, value: string): void {
+    try {
+      if (!this.isSessionStorageAvailable()) {
+        console.warn('[TokenManager] sessionStorage is not available')
+        return
+      }
+      sessionStorage.setItem(key, value)
+    } catch (error) {
+      console.error('[TokenManager] Error writing to sessionStorage:', error)
+    }
+  }
+
+  /**
+   * 안전한 sessionStorage.removeItem
+   */
+  static safeSessionStorageRemove(key: string): void {
+    try {
+      if (!this.isSessionStorageAvailable()) {
+        console.warn('[TokenManager] sessionStorage is not available')
+        return
+      }
+      sessionStorage.removeItem(key)
+    } catch (error) {
+      console.error('[TokenManager] Error removing from sessionStorage:', error)
+    }
   }
 
   /**
