@@ -7,21 +7,21 @@ import type {
 
 export const reportsAPI = {
   createReport: async (data: CreateReportRequest): Promise<void> => {
-    await apiClient.post('/api/reports', data)
+    await apiClient.post('/reports', data)
   },
 
   getWebView: async (): Promise<ReportWebViewResponse> => {
-    const response = await apiClient.get<ReportWebViewResponse>('/api/reports/web')
+    const response = await apiClient.get<ReportWebViewResponse>('/reports/web')
     return response.data
   },
 
   getPdf: async (): Promise<ReportPdfResponse> => {
-    const response = await apiClient.get<ReportPdfResponse>('/api/reports/pdf')
+    const response = await apiClient.get<ReportPdfResponse>('/reports/pdf')
     return response.data
   },
 
   deleteReport: async (): Promise<void> => {
-    await apiClient.delete('/api/reports')
+    await apiClient.delete('/reports')
   },
 
   uploadAdditionalData: async (siteId: string, file: File): Promise<void> => {
@@ -37,7 +37,7 @@ export const reportsAPI = {
     // 파일을 'file' 키에 추가
     formData.append('file', file)
 
-    await apiClient.post('/api/report/data', formData, {
+    await apiClient.post('/report/data', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
