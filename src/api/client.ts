@@ -77,8 +77,11 @@ apiClient.interceptors.response.use(
         // 토큰 갱신 실패 → 로그아웃 처리
         TokenManager.clearAll()
 
-        // window.location.href 대신 커스텀 이벤트 발생 (router에서 처리)
-        window.dispatchEvent(new CustomEvent('auth:logout'))
+        // 수동 로그아웃 중이 아닐 때만 auth:logout 이벤트 발생 (토큰 만료)
+        // 수동 로그아웃 중이면 이미 handleLogout()에서 처리하므로 이벤트 불필요
+        if (!TokenManager.isLoggingOut()) {
+          window.dispatchEvent(new CustomEvent('auth:logout'))
+        }
 
         return Promise.reject(refreshError)
       }

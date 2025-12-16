@@ -16,9 +16,9 @@ function getDefaultErrorMessage(status?: number, url?: string): string {
   if (url?.includes('/api/auth/login')) {
     switch (status) {
       case 401:
-        return '이메일 또는 비밀번호가 올바르지 않습니다.'
+        return '이메일 또는 비밀번호가 틀렸습니다.'
       case 404:
-        return '등록되지 않은 계정입니다.'
+        return '존재하지 않는 계정입니다.'
       default:
         return '로그인에 실패했습니다.'
     }
@@ -71,11 +71,11 @@ export function handleApiError(error: unknown): string {
         }
 
         // 비밀번호 오류 또는 기타 인증 실패
-        if (apiError?.message) {
-          return apiError.message
-        }
+        return '이메일 또는 비밀번호가 틀렸습니다.'
+      }
 
-        return '이메일 또는 비밀번호가 올바르지 않습니다.'
+      if (status === 404) {
+        return '존재하지 않는 계정입니다.'
       }
 
       return '로그인에 실패했습니다.'

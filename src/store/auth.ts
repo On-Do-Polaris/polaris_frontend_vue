@@ -7,6 +7,12 @@ import { handleApiError } from '@/utils/errorHandler'
 import { TokenManager } from '@/utils/tokenManager'
 
 export const useAuthStore = defineStore('auth', () => {
+  // 로그아웃 중에는 에러 토스트를 표시하지 않는 헬퍼
+  const showError = (message: string) => {
+    if (!TokenManager.isLoggingOut()) {
+      toast.error(message)
+    }
+  }
   // State (TokenManager에서 초기화) - 안전한 초기화
   let userInfo: { userId: string | null; userName: string | null } = {
     userId: null,
@@ -39,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function handleLogin(email: string, password: string) {
     // 입력값 검증
     if (!email || !password) {
-      toast.error('이메일과 비밀번호를 입력해주세요.')
+      showError('이메일과 비밀번호를 입력해주세요.')
       throw new Error('이메일과 비밀번호를 입력해주세요.')
     }
 
@@ -67,7 +73,7 @@ export const useAuthStore = defineStore('auth', () => {
       return response
     } catch (error) {
       const errorMessage = handleApiError(error)
-      toast.error(errorMessage)
+      showError(errorMessage)
       throw error
     }
   }
@@ -83,7 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
       return response
     } catch (error) {
       const errorMessage = handleApiError(error)
-      toast.error(errorMessage)
+      showError(errorMessage)
       throw error
     }
   }
@@ -92,22 +98,28 @@ export const useAuthStore = defineStore('auth', () => {
    * 로그아웃
    */
   async function handleLogout() {
-    try {
-      await authAPI.logout()
-    } catch (error) {
+    // 수동 로그아웃 플래그 설정 (다른 API 에러 토스트 방지)
+    TokenManager.setLoggingOut()
+
+    // 로컬 상태 초기화 (플래그는 유지)
+    TokenManager.clearAll()
+
+    accessToken.value = null
+    refreshToken.value = null
+    userId.value = null
+    userName.value = null
+    isFirstLogin.value = false
+
+    // 로그아웃 메시지를 sessionStorage에 저장
+    sessionStorage.setItem('logoutMessage', '로그아웃되었습니다')
+
+    // 백그라운드에서 로그아웃 API 호출 (기다리지 않음)
+    authAPI.logout().catch((error) => {
       console.error('로그아웃 요청 실패:', error)
-    } finally {
-      // 로컬 상태 초기화
-      TokenManager.clearAll()
+    })
 
-      accessToken.value = null
-      refreshToken.value = null
-      userId.value = null
-      userName.value = null
-      isFirstLogin.value = false
-
-      toast.info('로그아웃되었습니다')
-    }
+    // 즉시 로그인 페이지로 완전히 새로고침하며 이동
+    window.location.href = '/login'
   }
 
   /**
@@ -132,7 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
       // 3. View에서 router.push('/login')으로 로그인 페이지로 이동
     } catch (error) {
       const errorMessage = handleApiError(error)
-      toast.error(errorMessage)
+      showError(errorMessage)
       throw error
     }
   }

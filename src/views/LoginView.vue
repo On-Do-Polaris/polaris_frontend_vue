@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Lock, User, Loader2 } from 'lucide-vue-next'
 import { useRouter, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 import skLogo from '@/assets/sk-logo.png'
 import { useAuthStore } from '@/store/auth'
+import { TokenManager } from '@/utils/tokenManager'
 
 const router = useRouter()
 const route = useRoute()
@@ -13,6 +14,18 @@ const authStore = useAuthStore()
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
+
+// 로그아웃 메시지 표시 및 플래그 제거
+onMounted(() => {
+  // 로그아웃 플래그 제거 (로그인 페이지에서는 에러 토스트가 정상적으로 표시되어야 함)
+  TokenManager.clearLoggingOutFlag()
+
+  const logoutMessage = sessionStorage.getItem('logoutMessage')
+  if (logoutMessage) {
+    toast.info(logoutMessage)
+    sessionStorage.removeItem('logoutMessage')
+  }
+})
 
 const handleSubmit = async () => {
   if (loading.value) return

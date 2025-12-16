@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Mail, User, Globe, Lock, Loader2 } from 'lucide-vue-next'
-import { toast } from 'vue-sonner'
+import { Mail, User, Globe, Loader2 } from 'lucide-vue-next'
+import { useToast } from '@/composables/useToast'
 import {
   Dialog,
   DialogContent,
@@ -11,28 +10,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { userAPI } from '@/api/users'
+import type { UserResponse } from '@/api/types'
 
-const router = useRouter()
+const toast = useToast()
 
 const isDeleteModalOpen = ref(false)
 const loading = ref(false)
-const userInfo = ref<{ email: string; name: string; language: 'ko' | 'en' } | null>(null)
+const userInfo = ref<UserResponse | null>(null)
 const selectedLanguage = ref<'ko' | 'en'>('ko')
 
-// 사용자 정보 로드 - API 제거
+// 사용자 정보 로드
 const loadUserInfo = async () => {
   loading.value = true
   try {
-    // API 호출 제거 - 로컬 처리만
-    await new Promise(resolve => setTimeout(resolve, 500)) // 로딩 시뮬레이션
-
-    // 더미 데이터
-    userInfo.value = {
-      email: 'user@sk.ax',
-      name: '홍길동',
-      language: 'ko'
-    }
-    selectedLanguage.value = 'ko'
+    const data = await userAPI.getMe()
+    userInfo.value = data
+    selectedLanguage.value = data.language
   } catch (error) {
     console.error('사용자 정보 조회 실패:', error)
     toast.error('사용자 정보를 불러오는데 실패했습니다.')
@@ -41,29 +35,11 @@ const loadUserInfo = async () => {
   }
 }
 
-// 비밀번호 재설정 (이메일 발송) - API 제거
-const handlePasswordResetEmail = async () => {
-  if (!userInfo.value?.email) return
-
-  try {
-    // API 호출 제거 - 로컬 처리만
-    await new Promise(resolve => setTimeout(resolve, 500))
-    toast.success('비밀번호 재설정 링크가 이메일로 전송되었습니다.')
-  } catch (error) {
-    console.error('비밀번호 재설정 요청 실패:', error)
-    toast.error('비밀번호 재설정 요청에 실패했습니다.')
-  }
-}
-
-// 언어 설정 저장 - API 제거
+// 언어 설정 저장
 const handleLanguageSave = async () => {
   try {
-    // API 호출 제거 - 로컬 처리만
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    if (userInfo.value) {
-      userInfo.value.language = selectedLanguage.value
-    }
+    const updatedUser = await userAPI.updateMe({ language: selectedLanguage.value })
+    userInfo.value = updatedUser
     toast.success('언어 설정이 저장되었습니다.')
   } catch (error) {
     console.error('언어 설정 저장 실패:', error)
@@ -71,14 +47,14 @@ const handleLanguageSave = async () => {
   }
 }
 
-// 계정 삭제 - API 제거
+// 계정 삭제
 const handleDeleteAccount = async () => {
   isDeleteModalOpen.value = false
   loading.value = true
 
   try {
-    // API 호출 제거 - 로컬 처리만
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // DELETE /api/users/me 요청
+    await userAPI.deleteMe()
 
     // localStorage 정리
     localStorage.removeItem('accessToken')
@@ -86,12 +62,11 @@ const handleDeleteAccount = async () => {
     localStorage.removeItem('userId')
     localStorage.removeItem('userName')
 
-    toast.success('계정이 삭제되었습니다.')
+    // 삭제 메시지를 sessionStorage에 저장
+    sessionStorage.setItem('logoutMessage', '계정이 삭제되었습니다')
 
-    // 로그인 페이지로 리다이렉트
-    setTimeout(() => {
-      router.push('/login')
-    }, 1000)
+    // 즉시 로그인 페이지로 완전히 새로고침하며 이동
+    window.location.href = '/login'
   } catch (error) {
     console.error('계정 삭제 실패:', error)
     toast.error('계정 삭제에 실패했습니다.')
@@ -154,37 +129,12 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- 비밀번호 재설정 -->
-        <div class="bg-[#FFFFFF] border border-[#E5E7EB] shadow-sm">
-          <div class="border-b border-[#E5E7EB] px-6 py-3 bg-[#F9FAFB]">
-            <div class="flex items-center gap-2">
-              <Lock :size="16" class="text-[#A7A9AB]" />
-              <h3 class="text-sm text-[#000000]">비밀번호 재설정</h3>
-            </div>
-          </div>
-          <div class="p-6">
-            <div class="grid grid-cols-[1fr_auto] items-center gap-6">
-              <div>
-                <p class="text-sm text-[#000000]">
-                  등록된 이메일({{ userInfo.email }})로 재설정 링크가 전송됩니다.
-                </p>
-              </div>
-              <button
-                @click="handlePasswordResetEmail"
-                class="px-5 py-2 bg-[#EA002C] text-[#FFFFFF] text-sm hover:bg-[#d00028] transition-colors whitespace-nowrap"
-              >
-                메일 발송
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 언어 및 지역 설정 -->
+        <!-- 언어 설정 -->
         <div class="bg-[#FFFFFF] border border-[#E5E7EB] shadow-sm">
           <div class="border-b border-[#E5E7EB] px-6 py-3 bg-[#F9FAFB]">
             <div class="flex items-center gap-2">
               <Globe :size="16" class="text-[#A7A9AB]" />
-              <h3 class="text-sm text-[#000000]">언어 및 지역</h3>
+              <h3 class="text-sm text-[#000000]">보고서 언어 설정</h3>
             </div>
           </div>
           <div class="p-6">
@@ -234,13 +184,12 @@ onMounted(() => {
       </div>
 
       <Dialog :open="isDeleteModalOpen" @update:open="isDeleteModalOpen = $event">
-        <DialogContent class="sm:max-w-[425px]">
+        <DialogContent class="sm:max-w-[425px]" :dark="true">
           <DialogHeader>
             <DialogTitle>계정 삭제 확인</DialogTitle>
             <DialogDescription>
-              정말로 계정을 삭제하시겠습니까?
-              <br></br>
-              이 작업은 되돌릴 수 없으며, 모든 데이터가 영구적으로 삭제됩니다.
+              정말로 계정을 삭제하시겠습니까?<br></br> 이 작업은 되돌릴 수 없으며, 모든 데이터가 영구적으로
+              삭제됩니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
