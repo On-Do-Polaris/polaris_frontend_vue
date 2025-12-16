@@ -43,7 +43,7 @@ onMounted(async () => {
           <div class="relative">
             <select
               v-model="selectedSiteId"
-              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
+              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-14 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
             >
               <option v-for="site in sitesStore.allSites" :key="site.siteId" :value="site.siteId">
                 {{ site.siteName }}

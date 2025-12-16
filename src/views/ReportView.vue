@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Loader2, Upload } from 'lucide-vue-next'
+import { Loader2, Upload, ChevronDown } from 'lucide-vue-next'
 import { useSitesStore } from '@/store/sites'
 import { reportsAPI } from '@/api/reports'
 import { analysisAPI } from '@/api/analysis'
@@ -309,15 +309,21 @@ const scrollToSection = (sectionId: string) => {
               <label class="block text-sm font-medium text-gray-900 mb-2">
                 사업장명<span class="text-[#EA002C]">*</span>
               </label>
-              <select
-                v-model="selectedSiteId"
-                class="w-full px-4 py-2.5 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C]"
-              >
-                <option value="">사업장을 선택해주세요</option>
-                <option v-for="site in sitesStore.allSites" :key="site.siteId" :value="site.siteId">
-                  {{ site.siteName }}
-                </option>
-              </select>
+              <div class="relative">
+                <select
+                  v-model="selectedSiteId"
+                  class="w-full appearance-none px-4 py-2.5 pr-10 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
+                >
+                  <option value="">사업장을 선택해주세요</option>
+                  <option v-for="site in sitesStore.allSites" :key="site.siteId" :value="site.siteId">
+                    {{ site.siteName }}
+                  </option>
+                </select>
+                <ChevronDown
+                  class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                  :size="18"
+                />
+              </div>
             </div>
 
             <!-- 추가 데이터 파일 -->
