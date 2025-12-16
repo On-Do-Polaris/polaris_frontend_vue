@@ -16,7 +16,7 @@ export const analysisAPI = {
   // 온보딩 완료 후 전체 사업장 분석 시작
   startAllSitesAnalysis: async (siteIds: string[]): Promise<{ result: string; message: string }> => {
     const response = await apiClient.post<{ result: string; message: string }>(
-      '/api/analysis/start',
+      '/analysis/start',
       { sites: siteIds.map(siteId => ({ siteId })) }
     )
     return response.data
@@ -25,7 +25,7 @@ export const analysisAPI = {
   // 분석 상태 확인 (jobId 없이)
   getOverallAnalysisStatus: async (): Promise<{ result: string; data: { status: string } }> => {
     const response = await apiClient.get<{ result: string; data: { status: string } }>(
-      '/api/analysis/status'
+      '/analysis/status'
     )
     return response.data
   },
@@ -33,7 +33,7 @@ export const analysisAPI = {
   // 분석 개요 조회 (SSP2-2024 기준)
   getAnalysisSummary: async (siteId: string): Promise<AnalysisSummaryResponse> => {
     const response = await apiClient.get<{ result: string; data: AnalysisSummaryResponse }>(
-      '/api/analysis/summary',
+      '/analysis/summary',
       { params: { siteId } }
     )
     return response.data.data
@@ -41,7 +41,7 @@ export const analysisAPI = {
 
   startAnalysis: async (siteId: string, data: StartAnalysisRequest): Promise<AnalysisJobStatusResponse> => {
     const response = await apiClient.post<AnalysisJobStatusResponse>(
-      `/api/sites/${siteId}/analysis/start`,
+      `/sites/${siteId}/analysis/start`,
       data
     )
     return response.data
@@ -49,7 +49,7 @@ export const analysisAPI = {
 
   getAnalysisStatus: async (siteId: string, jobId: string): Promise<AnalysisJobStatusResponse> => {
     const response = await apiClient.get<AnalysisJobStatusResponse>(
-      `/api/sites/${siteId}/analysis/status/${jobId}`
+      `/sites/${siteId}/analysis/status/${jobId}`
     )
     return response.data
   },
@@ -57,7 +57,7 @@ export const analysisAPI = {
   getPhysicalRiskScores: async (siteId: string, hazardType?: string): Promise<PhysicalRiskScoreResponse> => {
     const params = hazardType ? { hazardType } : {}
     const response = await apiClient.get<PhysicalRiskScoreResponse>(
-      `/api/sites/${siteId}/analysis/physical-risk-scores`,
+      `/sites/${siteId}/analysis/physical-risk-scores`,
       { params }
     )
     return response.data
@@ -65,7 +65,7 @@ export const analysisAPI = {
 
   getTotalAnalysis: async (siteId: string, hazardType: string): Promise<AnalysisTotalResponse> => {
     const response = await apiClient.get<AnalysisTotalResponse>(
-      `/api/sites/${siteId}/analysis/total`,
+      `/sites/${siteId}/analysis/total`,
       { params: { hazardType } }
     )
     return response.data
@@ -73,21 +73,21 @@ export const analysisAPI = {
 
   getFinancialImpact: async (siteId: string): Promise<FinancialImpactResponse> => {
     const response = await apiClient.get<FinancialImpactResponse>(
-      `/api/sites/${siteId}/analysis/financial-impacts`
+      `/sites/${siteId}/analysis/financial-impacts`
     )
     return response.data
   },
 
   getVulnerability: async (siteId: string): Promise<VulnerabilityResponse> => {
     const response = await apiClient.get<VulnerabilityResponse>(
-      `/api/sites/${siteId}/analysis/vulnerability`
+      `/sites/${siteId}/analysis/vulnerability`
     )
     return response.data
   },
 
   getPastEvents: async (siteId: string): Promise<PastEventsResponse> => {
     const response = await apiClient.get<PastEventsResponse>(
-      `/api/sites/${siteId}/analysis/past-events`
+      `/sites/${siteId}/analysis/past-events`
     )
     return response.data
   },
@@ -99,7 +99,7 @@ export const analysisAPI = {
     term: 'short' | 'mid' | 'long'
   ): Promise<PhysicalRiskResponse> => {
     const response = await apiClient.get<{ result: string; data: PhysicalRiskResponse }>(
-      '/api/analysis/physical-risk',
+      '/analysis/physical-risk',
       { params: { siteId, hazardType, term } }
     )
     return response.data.data
@@ -112,7 +112,7 @@ export const analysisAPI = {
     term: 'short' | 'mid' | 'long'
   ): Promise<PhysicalRiskResponse> => {
     const response = await apiClient.get<{ result: string; data: PhysicalRiskResponse }>(
-      '/api/analysis/aal',
+      '/analysis/aal',
       { params: { siteId, hazardType, term } }
     )
     return response.data.data
@@ -121,7 +121,7 @@ export const analysisAPI = {
   // 취약성 분석 조회 (새 엔드포인트)
   getVulnerabilityAnalysis: async (siteId: string): Promise<VulnerabilityAnalysisResponse> => {
     const response = await apiClient.get<{ result: string; data: VulnerabilityAnalysisResponse }>(
-      '/api/analysis/vulnerability',
+      '/analysis/vulnerability',
       { params: { siteId } }
     )
     return response.data.data

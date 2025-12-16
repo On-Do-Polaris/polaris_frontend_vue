@@ -12,7 +12,7 @@ export const additionalDataAPI = {
    */
   getList: async (siteId: string): Promise<AdditionalDataListResponse> => {
     const response = await apiClient.get<AdditionalDataListResponse>(
-      `/api/sites/${siteId}/additional-data`,
+      `/sites/${siteId}/additional-data`,
     )
     return response.data
   },
@@ -22,7 +22,7 @@ export const additionalDataAPI = {
    */
   upload: async (siteId: string, data: AdditionalDataInput): Promise<AdditionalDataItem> => {
     const response = await apiClient.post<AdditionalDataItem>(
-      `/api/sites/${siteId}/additional-data`,
+      `/sites/${siteId}/additional-data`,
       data,
     )
     return response.data
@@ -33,7 +33,7 @@ export const additionalDataAPI = {
    */
   getStructured: async (siteId: string, dataId: string): Promise<StructuredDataResponse> => {
     const response = await apiClient.get<StructuredDataResponse>(
-      `/api/sites/${siteId}/additional-data/${dataId}/structured`,
+      `/sites/${siteId}/additional-data/${dataId}/structured`,
     )
     return response.data
   },
@@ -42,6 +42,6 @@ export const additionalDataAPI = {
    * 추가 데이터 삭제
    */
   delete: async (siteId: string, dataId: string): Promise<void> => {
-    await apiClient.delete(`/api/sites/${siteId}/additional-data/${dataId}`)
+    await apiClient.delete(`/sites/${siteId}/additional-data/${dataId}`)
   },
 }

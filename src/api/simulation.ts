@@ -12,7 +12,7 @@ export const simulationAPI = {
     data: RelocationSimulationRequest,
   ): Promise<RelocationSimulationResponse> => {
     const response = await apiClient.post<RelocationSimulationResponse>(
-      '/api/simulation/location/compare',
+      '/simulation/location/compare',
       data,
     )
     return response.data
@@ -22,14 +22,14 @@ export const simulationAPI = {
     data: ClimateSimulationRequest,
   ): Promise<ClimateSimulationResponse> => {
     const response = await apiClient.post<ClimateSimulationResponse>(
-      '/api/simulation/climate',
+      '/simulation/climate',
       data,
     )
     return response.data
   },
 
   getLocationRecommendations: async (siteId: string): Promise<LocationRecommendationResponse> => {
-    const response = await apiClient.get('/api/simulation/location/recommendation', {
+    const response = await apiClient.get('/simulation/location/recommendation', {
       params: { siteId },
     })
 
