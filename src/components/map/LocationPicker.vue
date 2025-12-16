@@ -29,16 +29,9 @@ const zoom = ref(props.latitude && props.longitude ? 12 : INITIAL_ZOOM)
 // VWorld 제공 범위 제한 (대한민국 영역)
 const vworldExtent = transformExtent([124, 33, 132, 43], 'EPSG:4326', 'EPSG:3857')
 
-// VWorld WMTS 타일 URL - 커스텀 함수로 {y}/{x} 순서 처리
-const { getWMTSUrl: getBaseWMTSUrl } = useVWorld()
-const vworldTileUrl = (tileCoord: number[]) => {
-  const z = tileCoord[0]
-  const x = tileCoord[1]
-  const y = tileCoord[2]
-  // VWorld는 {y}/{x} 순서 사용
-  const baseUrl = getBaseWMTSUrl('Base').replace('{z}', String(z)).replace('{x}', String(y)).replace('{y}', String(x))
-  return baseUrl
-}
+// VWorld WMTS 타일 URL
+const { getWMTSUrl } = useVWorld()
+const vworldTileUrl = getWMTSUrl('Base')
 
 // 선택된 위치 (EPSG:3857)
 const selectedLocation = ref(
@@ -107,7 +100,7 @@ watch(
 
       <!-- 배경 지도 (VWorld Base Map) -->
       <ol-tile-layer>
-        <ol-source-xyz :tileUrlFunction="vworldTileUrl" :crossOrigin="'anonymous'" />
+        <ol-source-xyz :url="vworldTileUrl" :crossOrigin="'anonymous'" />
       </ol-tile-layer>
 
       <!-- 선택된 위치 마커 -->
