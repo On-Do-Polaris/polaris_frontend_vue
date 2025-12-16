@@ -15,9 +15,23 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    proxy: {
+      '/vworld-api': {
+        target: 'https://api.vworld.kr',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/vworld-api/, ''),
+      },
+    },
   },
   preview: {
     host: '0.0.0.0',
     port: 4173,
+    proxy: {
+      '/vworld-api': {
+        target: 'https://api.vworld.kr',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/vworld-api/, ''),
+      },
+    },
   },
 })

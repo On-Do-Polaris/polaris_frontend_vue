@@ -35,11 +35,9 @@ export function useVWorld() {
    * @returns WMTS URL 템플릿
    */
   const getWMTSUrl = (layerName: 'Base' | 'Satellite' | 'Hybrid' = 'Base') => {
-    // 개발/프로덕션 모두 프록시를 통해 요청 (nginx에서 CORS 처리)
-    const baseUrl = '/vworld-api'
-    // VWorld WMTS 형식: {z}/{x}/{y} 순서 (TileMatrixSet 생략 시 기본값 사용)
-    const url = `${baseUrl}/req/wmts/1.0.0/${API_KEY}/${layerName}/{z}/{x}/{y}.png`
-    console.log('[VWorld] WMTS URL 생성:', url.replace(API_KEY, 'API_KEY'))
+    // 직접 VWorld 서버에 요청 (빌드 환경에서도 작동)
+    const url = `https://xdworld.vworld.kr/2d/${layerName}/service/{z}/{x}/{y}.png`
+    console.log('[VWorld] WMTS URL 생성:', url)
     return url
   }
 
@@ -60,7 +58,8 @@ export function useVWorld() {
     try {
       console.log('[VWorld] Geocoding 시작:', address)
 
-      // 개발/프로덕션 모두 프록시를 통해 요청 (nginx에서 CORS 처리)
+      // 프록시를 통해 요청 (CORS 회피)
+      // 개발: Vite dev server proxy, 프로덕션: nginx proxy
       const baseUrl = '/vworld-api'
 
       // 주소 정제 (특별시/광역시 축약형 처리)

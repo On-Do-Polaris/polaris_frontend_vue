@@ -20,15 +20,8 @@ const zoom = ref(7)
 const vworldExtent = transformExtent([124, 33, 132, 43], 'EPSG:4326', 'EPSG:3857')
 
 // VWorld WMTS 타일 URL
-const { getWMTSUrl: getBaseWMTSUrl } = useVWorld()
-const vworldTileUrl = (tileCoord: number[]) => {
-  const z = tileCoord[0]
-  const x = tileCoord[1]
-  const y = tileCoord[2]
-  // VWorld는 {y}/{x} 순서 사용
-  const baseUrl = getBaseWMTSUrl('Base').replace('{z}', String(z)).replace('{x}', String(y)).replace('{y}', String(x))
-  return baseUrl
-}
+const { getWMTSUrl } = useVWorld()
+const vworldTileUrl = getWMTSUrl('Base')
 
 // 좌표 가져오기 (백엔드에서 위경도가 없으면 임시 좌표 사용)
 const getCoordinates = (site: SiteInfo | SiteSummary, index: number): [number, number] => {
@@ -113,7 +106,7 @@ const handleMarkerClick = (site: SiteInfo | SiteSummary) => {
 
       <!-- 배경 지도 (VWorld Base Map) -->
       <ol-tile-layer>
-        <ol-source-xyz :tileUrlFunction="vworldTileUrl" :crossOrigin="'anonymous'" />
+        <ol-source-xyz :url="vworldTileUrl" :crossOrigin="'anonymous'" />
       </ol-tile-layer>
 
       <!-- 사업장 마커 레이어 -->
