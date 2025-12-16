@@ -40,7 +40,7 @@ const props = defineProps<Props>()
 
 const { hazardTypes, fetchHazardTypes } = useMeta()
 const { openAddressPopup } = useDaumPostcode()
-const { geocodeAddress } = useVWorld()
+const { geocodeAddress, reverseGeocode } = useVWorld()
 
 // 지도 ref
 const mapContainer = ref<HTMLElement | null>(null)
@@ -72,45 +72,70 @@ const currentSiteLoading = ref(false)
 // 검색한 새 장소의 시뮬레이션 결과
 const searchedLocationData = ref<any>(null)
 
-// 추천 후보지 목록 (computed)
-const recommendedSites = computed(() => {
-  if (!recommendationsData.value) return []
+// 추천 후보지 목록 (ref로 변경 - 비동기 역지오코딩 처리)
+const recommendedSites = ref<any[]>([])
+
+// 추천 후보지 데이터 가공
+const processRecommendations = async () => {
+  if (!recommendationsData.value) {
+    recommendedSites.value = []
+    return
+  }
 
   const site = recommendationsData.value.site
-  if (!site) return []
+  if (!site) {
+    recommendedSites.value = []
+    return
+  }
 
   const candidates = [site.candidate1, site.candidate2, site.candidate3]
 
-  return candidates.map((candidate: any) => {
-    // riskscore에 따른 배지 설정
-    let badge = '낮음'
-    let badgeColor = 'bg-[#B3CF0A]'
+  // 각 후보지에 대해 역지오코딩 수행
+  const processedCandidates = await Promise.all(
+    candidates.map(async (candidate: any, index: number) => {
+      // riskscore에 따른 배지 설정
+      let badge = '낮음'
+      let badgeColor = 'bg-[#B3CF0A]'
 
-    if (candidate.riskscore >= 70) {
-      badge = '높음'
-      badgeColor = 'bg-[#EA002C]'
-    } else if (candidate.riskscore >= 40) {
-      badge = '보통'
-      badgeColor = 'bg-[#FBBC05]'
-    }
+      if (candidate.riskscore >= 70) {
+        badge = '높음'
+        badgeColor = 'bg-[#EA002C]'
+      } else if (candidate.riskscore >= 40) {
+        badge = '보통'
+        badgeColor = 'bg-[#FBBC05]'
+      }
 
-    return {
-      candidateId: candidate.candidateId,
-      name: candidate.candidateName,
-      badge,
-      badgeColor,
-      location: candidate.roadAddress,
-      riskScore: candidate.riskscore,
-      aal: candidate.aalscore,
-      latitude: candidate.latitude,
-      longitude: candidate.longitude,
-      physicalRiskScores: candidate['physical-risk-scores'],
-      aalScores: candidate['aal-scores'],
-      pros: candidate.pros,
-      cons: candidate.cons,
-    }
-  })
-})
+      // 역지오코딩으로 도로명 주소 가져오기
+      let roadAddress = '주소 로딩 중...'
+      if (candidate.latitude && candidate.longitude) {
+        const address = await reverseGeocode(candidate.latitude, candidate.longitude)
+        if (address) {
+          roadAddress = address
+        } else {
+          roadAddress = `위도: ${candidate.latitude}, 경도: ${candidate.longitude}`
+        }
+      }
+
+      return {
+        candidateId: candidate.candidateId,
+        name: `후보지${index + 1}`, // 후보지1, 후보지2, 후보지3
+        badge,
+        badgeColor,
+        location: roadAddress,
+        riskScore: candidate.riskscore,
+        aal: candidate.aalscore,
+        latitude: candidate.latitude,
+        longitude: candidate.longitude,
+        physicalRiskScores: candidate['physical-risk-scores'],
+        aalScores: candidate['aal-scores'],
+        pros: candidate.pros,
+        cons: candidate.cons,
+      }
+    }),
+  )
+
+  recommendedSites.value = processedCandidates
+}
 
 // 선택된 후보지 (검색 결과가 있으면 검색 결과 사용, -1이면 검색 결과)
 const selectedCandidate = computed(() => {
@@ -133,6 +158,9 @@ const loadRecommendations = async () => {
     const { simulationAPI } = await import('@/api/simulation')
     const response = await simulationAPI.getLocationRecommendations(props.selectedSiteId)
     recommendationsData.value = response
+
+    // 데이터 로드 후 역지오코딩 수행
+    await processRecommendations()
   } catch (err: any) {
     console.error('Failed to load recommendations:', err)
     toast.error('추천 후보지를 불러오는데 실패했습니다')

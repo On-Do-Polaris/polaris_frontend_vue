@@ -18,6 +18,30 @@ interface VWorldGeocodeResponse {
   }
 }
 
+/**
+ * VWorld 역지오코딩 API 응답 타입
+ */
+interface VWorldReverseGeocodeResponse {
+  response: {
+    status: string
+    result?: {
+      text: string // 전체 주소
+      structure?: {
+        level0?: string // 국가
+        level1?: string // 시도
+        level2?: string // 시군구
+        level3?: string // 읍면동
+        level4L?: string // 도로명
+        level4LC?: string // 법정동/리
+        level4A?: string // 지번 주소
+        level4AC?: string // 산
+        level5?: string // 건물번호
+        detail?: string // 상세주소
+      }
+    }[]
+  }
+}
+
 export function useVWorld() {
   const API_KEY = import.meta.env.VITE_VWORLD_API || ''
 
@@ -136,8 +160,73 @@ export function useVWorld() {
     }
   }
 
+  /**
+   * 좌표 -> 주소 변환 (역지오코딩)
+   * VWorld API를 사용하여 위경도 좌표를 주소로 변환
+   * @param latitude - 위도
+   * @param longitude - 경도
+   * @returns 도로명 주소
+   */
+  const reverseGeocode = async (
+    latitude: number,
+    longitude: number,
+  ): Promise<string | null> => {
+    if (!API_KEY) {
+      console.error('[VWorld] API Key가 없어 역지오코딩을 수행할 수 없습니다')
+      return null
+    }
+
+    try {
+      console.log('[VWorld] 역지오코딩 시작:', { latitude, longitude })
+
+      // 프록시를 통해 요청 (CORS 회피)
+      const baseUrl = '/vworld-api'
+
+      // VWorld 역지오코딩 API 호출
+      const params = new URLSearchParams({
+        service: 'address',
+        request: 'getAddress',
+        point: `${longitude},${latitude}`, // 경도,위도 순서
+        crs: 'epsg:4326',
+        format: 'json',
+        type: 'both', // 도로명 + 지번
+        zipcode: 'false',
+        simple: 'false',
+        key: API_KEY,
+      })
+
+      const url = `${baseUrl}/req/address?${params.toString()}`
+      console.log('[VWorld] 역지오코딩 API 요청:', url.replace(API_KEY, 'API_KEY'))
+
+      const response = await fetch(url)
+      if (!response.ok) {
+        console.error('[VWorld] 역지오코딩 API 요청 실패:', response.status, response.statusText)
+        return null
+      }
+
+      const data: VWorldReverseGeocodeResponse = await response.json()
+      console.log('[VWorld] 역지오코딩 API 응답:', data)
+
+      if (data.response.status === 'OK' && data.response.result && data.response.result.length > 0) {
+        // 첫 번째 결과의 전체 주소 반환 (도로명 주소 우선)
+        const address = data.response.result[0]?.text
+        if (address) {
+          console.log('[VWorld] 역지오코딩 성공:', { latitude, longitude }, '->', address)
+          return address
+        }
+      }
+
+      console.warn('[VWorld] 역지오코딩 결과 없음:', { latitude, longitude })
+      return null
+    } catch (error) {
+      console.error('[VWorld] 역지오코딩 오류:', error)
+      return null
+    }
+  }
+
   return {
     getWMTSUrl,
     geocodeAddress,
+    reverseGeocode,
   }
 }

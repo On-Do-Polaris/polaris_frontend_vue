@@ -8,6 +8,41 @@ import OpenLayersMap from 'vue3-openlayers'
 import App from './App.vue'
 import router from './router'
 
+// 전역 에러 핸들러 - Storage 접근 에러 처리
+window.addEventListener('error', (event) => {
+  if (
+    event.error &&
+    event.error.message &&
+    (event.error.message.includes('Access to storage') ||
+      event.error.message.includes('storage is not allowed'))
+  ) {
+    console.warn('[Storage Error] Storage access is blocked by browser settings')
+    console.warn('[Storage Error] App will continue with limited functionality')
+    event.preventDefault() // 에러 팝업 방지
+    return
+  }
+})
+
+// 전역 unhandled promise rejection 핸들러
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[Unhandled Promise Rejection]', event.reason)
+
+  // Storage 에러는 콘솔에만 경고 표시하고 기본 에러 동작 방지
+  if (
+    event.reason &&
+    ((event.reason instanceof Error &&
+      (event.reason.message.includes('Access to storage') ||
+        event.reason.message.includes('storage is not allowed'))) ||
+      (typeof event.reason === 'string' &&
+        (event.reason.includes('Access to storage') ||
+          event.reason.includes('storage is not allowed'))))
+  ) {
+    console.warn('[Storage Error] Storage access is blocked by browser settings')
+    console.warn('[Storage Error] App will continue with limited functionality')
+    event.preventDefault() // 에러 팝업 방지
+  }
+})
+
 console.log('[Main] Starting app initialization...')
 console.log('[Main] Environment:', {
   BASE_URL: import.meta.env.BASE_URL,

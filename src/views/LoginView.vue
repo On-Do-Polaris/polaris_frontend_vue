@@ -20,10 +20,10 @@ onMounted(() => {
   // 로그아웃 플래그 제거 (로그인 페이지에서는 에러 토스트가 정상적으로 표시되어야 함)
   TokenManager.clearLoggingOutFlag()
 
-  const logoutMessage = sessionStorage.getItem('logoutMessage')
+  const logoutMessage = TokenManager.safeSessionStorageGet('logoutMessage')
   if (logoutMessage) {
     toast.info(logoutMessage)
-    sessionStorage.removeItem('logoutMessage')
+    TokenManager.safeSessionStorageRemove('logoutMessage')
   }
 })
 
