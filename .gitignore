@@ -41,8 +41,11 @@ coverage
 __screenshots__/
 
 # env
-.env*
-.env.example
+.env
+.env.production
+
+# .env.example은 Git에 포함
+!.env.example
 
 # guide
 tmp_docs/*

@@ -4,6 +4,14 @@ FROM node:22-alpine AS builder
 # 작업 디렉토리 설정
 WORKDIR /app
 
+# 빌드 인자 정의 (GitHub Actions에서 전달받음)
+ARG VITE_API_BASE_URL
+ARG VITE_VWORLD_API
+
+# 환경 변수로 설정 (Vite 빌드 시 사용됨)
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_VWORLD_API=$VITE_VWORLD_API
+
 # package.json과 package-lock.json 복사
 COPY package*.json ./
 
