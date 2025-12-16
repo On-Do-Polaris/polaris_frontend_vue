@@ -12,6 +12,7 @@ import SimulationView from '../views/SimulationView.vue'
 import PastDisasterView from '../views/PastDisasterView.vue'
 import SiteManagementView from '../views/SiteManagementView.vue'
 import MyAccountView from '../views/MyAccountView.vue'
+import PrivacyPolicyView from '../views/PrivacyPolicyView.vue'
 import { useAuthStore } from '@/store/auth'
 import { useUiStore, type Page } from '@/store/ui'
 import { sitesAPI } from '@/api/sites'
@@ -103,6 +104,12 @@ const router = createRouter({
       path: '/my-account',
       name: 'my-account',
       component: MyAccountView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/privacy-policy',
+      name: 'privacy-policy',
+      component: PrivacyPolicyView,
       meta: { requiresAuth: true },
     },
   ],

@@ -210,5 +210,18 @@ onMounted(() => {
         </DialogContent>
       </Dialog>
     </div>
+
+    <!-- 푸터 -->
+    <div class="mt-8 border-t border-[#E5E7EB]">
+      <div class="max-w-4xl mx-auto text-center py-6">
+        <router-link
+          to="/privacy-policy"
+          class="text-sm text-[#8A8D8F] hover:text-[#EA002C] transition-colors"
+        >
+          개인정보 처리 방침
+        </router-link>
+        <p class="mt-4 text-xs text-[#A7A9AB]">© 2025 SKALA. All rights reserved.</p>
+      </div>
+    </div>
   </div>
 </template>
