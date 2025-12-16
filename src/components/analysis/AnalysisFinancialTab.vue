@@ -294,7 +294,7 @@ const financialReason = computed(() => {
           <div class="relative">
             <select
               v-model="selectedPeriod"
-              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
+              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-14 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
             >
               <option v-for="period in periods" :key="period" :value="period">
                 {{ period }}
@@ -310,7 +310,7 @@ const financialReason = computed(() => {
           <div class="relative">
             <select
               v-model="selectedRiskFactor"
-              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer min-w-[160px]"
+              class="appearance-none bg-white border border-gray-300 px-4 py-2 pr-14 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer min-w-[160px]"
             >
               <option v-for="factor in riskFactors" :key="factor" :value="factor">
                 {{ factor }}

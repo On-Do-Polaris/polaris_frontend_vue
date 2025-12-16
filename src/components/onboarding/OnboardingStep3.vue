@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Search } from 'lucide-vue-next'
+import { Search, ChevronDown } from 'lucide-vue-next'
 
 interface Props {
   industries: Array<{ code: string; name: string }>
@@ -77,7 +77,7 @@ defineExpose({
             v-model="formData.address"
             type="text"
             placeholder="예: 부산광역시 해운대구 센텀중앙로 78"
-            class="w-full px-3 py-2 pr-10 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#EA002C] focus:border-transparent cursor-pointer"
+            class="w-full px-3 py-2 pr-14 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#EA002C] focus:border-transparent cursor-pointer"
             readonly
             @click="handleSearchAddress"
           />
@@ -96,15 +96,21 @@ defineExpose({
         <label class="block text-sm font-medium text-gray-700 mb-1">
           업종<span class="text-red-500">*</span>
         </label>
-        <select
-          v-model="formData.type"
-          class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#EA002C] focus:border-transparent"
-        >
-          <option value="" disabled>예: 물류</option>
-          <option v-for="industry in industries" :key="industry.code" :value="industry.code">
-            {{ industry.name }}
-          </option>
-        </select>
+        <div class="relative">
+          <select
+            v-model="formData.type"
+            class="w-full appearance-none px-3 py-2 pr-10 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#EA002C] focus:border-transparent cursor-pointer"
+          >
+            <option value="" disabled>예: 물류</option>
+            <option v-for="industry in industries" :key="industry.code" :value="industry.code">
+              {{ industry.name }}
+            </option>
+          </select>
+          <ChevronDown
+            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+            :size="16"
+          />
+        </div>
       </div>
     </div>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Building2, Trash2, Save, Search, X, Loader2 } from 'lucide-vue-next'
+import { Building2, Trash2, Save, Search, X, Loader2, ChevronDown } from 'lucide-vue-next'
 import { useSitesStore, type SiteInfo } from '@/store/sites'
 import { useMeta } from '@/composables/useMeta'
 import { toast } from 'vue-sonner'
@@ -341,7 +341,7 @@ const handleAddSite = async () => {
                       @click="handleSearchAddressForEdit"
                       readonly
                       :style="editFormData.address ? 'color: #000 !important;' : ''"
-                      class="w-full px-3 py-2 pr-10 border border-gray-300 text-sm focus:outline-none focus:border-[#EA002C] cursor-pointer bg-white placeholder:text-gray-400"
+                      class="w-full px-3 py-2 pr-14 border border-gray-300 text-sm focus:outline-none focus:border-[#EA002C] cursor-pointer bg-white placeholder:text-gray-400"
                       :placeholder="editFormData.address ? '' : '클릭하여 주소 입력'"
                     />
                     <button
@@ -355,19 +355,25 @@ const handleAddSite = async () => {
                 </div>
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">산업 분류 *</label>
-                  <select
-                    v-model="editFormData.type"
-                    class="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#EA002C] bg-white"
-                  >
-                    <option value="">산업 분류 선택</option>
-                    <option
-                      v-for="industry in industries"
-                      :key="industry.id"
-                      :value="industry.code"
+                  <div class="relative">
+                    <select
+                      v-model="editFormData.type"
+                      class="w-full appearance-none px-3 py-2 pr-10 border border-gray-300 text-sm focus:outline-none focus:border-[#EA002C] bg-white cursor-pointer"
                     >
-                      {{ industry.name }}
-                    </option>
-                  </select>
+                      <option value="">산업 분류 선택</option>
+                      <option
+                        v-for="industry in industries"
+                        :key="industry.id"
+                        :value="industry.code"
+                      >
+                        {{ industry.name }}
+                      </option>
+                    </select>
+                    <ChevronDown
+                      class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                      :size="16"
+                    />
+                  </div>
                 </div>
                 <div class="flex gap-2 pt-2">
                   <button
@@ -461,16 +467,22 @@ const handleAddSite = async () => {
                 <label class="block text-sm mb-2 text-gray-700">
                   산업 분류 <span class="text-[#EA002C]">*</span>
                 </label>
-                <select
-                  v-model="newSite.type"
-                  class="w-full px-4 py-2.5 border border-gray-300 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] transition-colors bg-white"
-                  required
-                >
-                  <option value="">산업 분류를 선택하세요</option>
-                  <option v-for="industry in industries" :key="industry.id" :value="industry.code">
-                    {{ industry.name }}
-                  </option>
-                </select>
+                <div class="relative">
+                  <select
+                    v-model="newSite.type"
+                    class="w-full appearance-none px-4 py-2.5 pr-10 border border-gray-300 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] transition-colors bg-white cursor-pointer"
+                    required
+                  >
+                    <option value="">산업 분류를 선택하세요</option>
+                    <option v-for="industry in industries" :key="industry.id" :value="industry.code">
+                      {{ industry.name }}
+                    </option>
+                  </select>
+                  <ChevronDown
+                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                    :size="18"
+                  />
+                </div>
               </div>
 
               <div>

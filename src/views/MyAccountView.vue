@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Mail, User, Globe, Loader2 } from 'lucide-vue-next'
+import { Mail, User, Globe, Loader2, ChevronDown } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 import {
   Dialog,
@@ -139,13 +139,19 @@ onMounted(() => {
             <div>
               <label class="text-xs text-[#8A8D8F] block mb-2"> 언어 </label>
               <div class="flex items-center gap-4">
-                <select
-                  v-model="selectedLanguage"
-                  class="flex-1 px-3 py-2 border border-[#D1D5DB] text-sm focus:outline-none focus:ring-1 focus:ring-[#EA002C]"
-                >
-                  <option value="ko">한국어</option>
-                  <option value="en">English</option>
-                </select>
+                <div class="flex-1 relative">
+                  <select
+                    v-model="selectedLanguage"
+                    class="w-full appearance-none px-3 py-2 pr-10 border border-[#D1D5DB] text-sm focus:outline-none focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
+                  >
+                    <option value="ko">한국어</option>
+                    <option value="en">English</option>
+                  </select>
+                  <ChevronDown
+                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                    :size="16"
+                  />
+                </div>
                 <button
                   @click="handleLanguageSave"
                   class="px-6 py-2 bg-[#EA002C] text-[#FFFFFF] text-sm hover:bg-[#d00028] transition-colors whitespace-nowrap"

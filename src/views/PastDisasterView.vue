@@ -177,7 +177,7 @@ const goToDashboard = () => {
                 <div class="relative">
                   <select
                     v-model="selectedYear"
-                    class="w-full appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
+                    class="w-full appearance-none bg-white border border-gray-300 px-4 py-2 pr-14 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
                   >
                     <option v-for="year in years" :key="year.value" :value="year.value">
                       {{ year.label }}
@@ -196,7 +196,7 @@ const goToDashboard = () => {
                 <div class="relative">
                   <select
                     v-model="selectedDisasterType"
-                    class="w-full appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
+                    class="w-full appearance-none bg-white border border-gray-300 px-4 py-2 pr-14 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
                   >
                     <option v-for="type in disasterTypes" :key="type.value" :value="type.value">
                       {{ type.label }}
@@ -215,7 +215,7 @@ const goToDashboard = () => {
                 <div class="relative">
                   <select
                     v-model="selectedDisasterLevel"
-                    class="w-full appearance-none bg-white border border-gray-300 px-4 py-2 pr-10 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
+                    class="w-full appearance-none bg-white border border-gray-300 px-4 py-2 pr-14 text-sm text-gray-900 focus:outline-none focus:border-[#EA002C] focus:ring-1 focus:ring-[#EA002C] cursor-pointer"
                   >
                     <option v-for="level in disasterLevels" :key="level.value" :value="level.value">
                       {{ level.label }}
