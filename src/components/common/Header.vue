@@ -28,16 +28,9 @@ const onNavigate = (page: Page) => {
   router.push(pageRoutes[page] ?? '/')
 }
 
-const onLogout = async () => {
-  try {
-    await authStore.handleLogout()
-    // 로그인 페이지로 리다이렉트
-    router.push('/login')
-  } catch (error) {
-    console.error('로그아웃 실패:', error)
-    // 에러가 발생해도 로그인 페이지로 이동
-    router.push('/login')
-  }
+const onLogout = () => {
+  // handleLogout()이 이미 window.location.href로 리다이렉트 처리
+  authStore.handleLogout()
 }
 </script>
 

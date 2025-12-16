@@ -13,6 +13,7 @@ export class TokenManager {
     REFRESH_TOKEN: 'refreshToken',
     USER_ID: 'userId',
     USER_NAME: 'userName',
+    IS_LOGGING_OUT: 'isLoggingOut',
   } as const
 
   /**
@@ -125,13 +126,35 @@ export class TokenManager {
   }
 
   /**
-   * 모든 토큰 및 사용자 정보 삭제
+   * 모든 토큰 및 사용자 정보 삭제 (로그아웃 플래그는 유지)
    */
   static clearAll(): void {
     this.safeRemoveItem(this.STORAGE_KEYS.ACCESS_TOKEN)
     this.safeRemoveItem(this.STORAGE_KEYS.REFRESH_TOKEN)
     this.safeRemoveItem(this.STORAGE_KEYS.USER_ID)
     this.safeRemoveItem(this.STORAGE_KEYS.USER_NAME)
+    // IS_LOGGING_OUT은 제거하지 않음 - 로그아웃 프로세스가 완료될 때까지 유지
+  }
+
+  /**
+   * 수동 로그아웃 상태 설정
+   */
+  static setLoggingOut(): void {
+    this.safeSetItem(this.STORAGE_KEYS.IS_LOGGING_OUT, 'true')
+  }
+
+  /**
+   * 수동 로그아웃 중인지 확인
+   */
+  static isLoggingOut(): boolean {
+    return this.safeGetItem(this.STORAGE_KEYS.IS_LOGGING_OUT) === 'true'
+  }
+
+  /**
+   * 로그아웃 플래그 제거
+   */
+  static clearLoggingOutFlag(): void {
+    this.safeRemoveItem(this.STORAGE_KEYS.IS_LOGGING_OUT)
   }
 
   /**

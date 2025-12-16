@@ -4,14 +4,14 @@ import {
   type DialogContentEmits,
   type DialogContentProps,
   DialogPortal,
-  DialogOverlay,
   useForwardPropsEmits,
 } from 'radix-vue'
 import { X } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
 import DialogClose from './DialogClose.vue'
+import DialogOverlay from './DialogOverlay.vue'
 
-const props = defineProps<DialogContentProps & { class?: string }>()
+const props = defineProps<DialogContentProps & { class?: string; dark?: boolean }>()
 const emits = defineEmits<DialogContentEmits>()
 
 const forwarded = useForwardPropsEmits(props, emits)
@@ -19,7 +19,7 @@ const forwarded = useForwardPropsEmits(props, emits)
 
 <template>
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay :dark="props.dark" />
     <DialogContent
       v-bind="forwarded"
       :class="

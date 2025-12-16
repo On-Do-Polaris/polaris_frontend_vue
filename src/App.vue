@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onErrorCaptured, onMounted, onUnmounted } from 'vue'
-import { RouterView, useRouter, useRoute } from 'vue-router'
-import { Toaster, toast } from 'vue-sonner'
+import { RouterView, useRoute } from 'vue-router'
+import { Toaster } from 'vue-sonner'
 import Header from '@/components/common/Header.vue'
 import OnboardingModal from '@/components/common/OnboardingModal.vue'
 import { useAuthStore } from './store/auth'
@@ -9,7 +9,6 @@ import { useUiStore } from './store/ui'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
-const router = useRouter()
 const route = useRoute()
 
 const shouldShowOnboarding = computed(() => {
@@ -38,22 +37,19 @@ const handleOnboardingComplete = () => {
 
 const handleOnboardingClose = () => {
   uiStore.setShowOnboarding(false)
+  // handleLogout()이 이미 window.location.href로 리다이렉트 처리
   authStore.handleLogout()
-  router.push('/login')
 }
 
 // 자동 로그아웃 이벤트 리스너 (토큰 갱신 실패 시)
 const handleAuthLogout = () => {
   console.log('[App] Auto logout triggered - Invalid or expired token')
 
-  // 토스트 메시지 표시
-  toast.error('로그인 시간 만료로 다시 로그인해주세요')
+  // 토큰 만료 메시지를 sessionStorage에 저장
+  sessionStorage.setItem('logoutMessage', '로그인 시간 만료로 다시 로그인해주세요')
 
-  // 히스토리를 완전히 초기화하고 로그인 페이지로 리다이렉트
-  // window.location.replace()를 사용하면 현재 페이지를 교체하여 뒤로 가기가 불가능
-  setTimeout(() => {
-    window.location.replace('/login')
-  }, 1500) // 토스트 메시지를 볼 시간을 주기 위해 지연
+  // 즉시 로그인 페이지로 리다이렉트
+  window.location.replace('/login')
 }
 
 onMounted(() => {
