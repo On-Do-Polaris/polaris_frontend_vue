@@ -5,6 +5,7 @@ import { useSitesStore, type SiteInfo } from '@/store/sites'
 import { useMeta } from '@/composables/useMeta'
 import { toast } from 'vue-sonner'
 import type { CreateSiteRequest, UpdateSiteRequest } from '@/api/types'
+import { analysisAPI } from '@/api'
 import LocationPicker from '@/components/map/LocationPicker.vue'
 import { useDaumPostcode } from '@/composables/useDaumPostcode'
 import { useVWorld } from '@/composables/useVWorld'
@@ -104,7 +105,7 @@ const handleSearchAddress = async () => {
         newSite.value.longitude = coords.longitude
         console.log('[SiteManagement] 좌표 저장 완료:', {
           latitude: newSite.value.latitude,
-          longitude: newSite.value.longitude
+          longitude: newSite.value.longitude,
         })
         toast.success('주소와 좌표가 설정되었습니다')
       } else {
@@ -244,7 +245,11 @@ const handleAddSite = async () => {
       roadAddress: newSite.value.roadAddress,
       jibunAddress: newSite.value.jibunAddress,
     }
-    await sitesStore.createSite(createData)
+    const createdSite = await sitesStore.createSite(createData)
+
+    // 사업장 생성 성공 후 분석 시작
+    await analysisAPI.startAllSitesAnalysis([createdSite.siteId])
+
     // 폼 초기화
     newSite.value = {
       name: '',
@@ -474,7 +479,11 @@ const handleAddSite = async () => {
                     required
                   >
                     <option value="">산업 분류를 선택하세요</option>
-                    <option v-for="industry in industries" :key="industry.id" :value="industry.code">
+                    <option
+                      v-for="industry in industries"
+                      :key="industry.id"
+                      :value="industry.code"
+                    >
                       {{ industry.name }}
                     </option>
                   </select>
@@ -505,6 +514,14 @@ const handleAddSite = async () => {
                   <Loader2 v-if="loading" class="animate-spin" :size="18" />
                   <span>{{ loading ? '처리 중...' : '사업장 추가' }}</span>
                 </button>
+              </div>
+
+              <div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded">
+                <p class="text-sm text-gray-600 leading-relaxed">
+                  새로 추가되는 사업장에 대한 분석은 분석이 완료된 후 사이트에서 확인할 수 있습니다.
+                  <br />사업장 분석이 완료되면 메일을 발송드리며, 메일 발송 전까지는 새로 추가된
+                  사업장에 대해서는 반영되지 않은 결과임을 참고해주시길 바랍니다.
+                </p>
               </div>
             </form>
           </div>

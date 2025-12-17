@@ -1,97 +1,100 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { Building2, Trash2, Search } from 'lucide-vue-next';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { computed, ref, watch } from 'vue'
+import { Building2, Trash2, Search } from 'lucide-vue-next'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { useAuthStore } from '@/store/auth'
+
+const authStore = useAuthStore()
 
 type SiteEntry = {
-  id: string;
-  name: string;
-  address: string;
-  type: string;
-};
+  id: string
+  name: string
+  address: string
+  type: string
+}
 
 const props = defineProps<{
-  isOpen: boolean;
-}>();
+  isOpen: boolean
+}>()
 
 const emit = defineEmits<{
-  close: [];
-  complete: [];
-}>();
+  close: []
+  complete: []
+}>()
 
-const currentStep = ref(0);
-const showAddSiteDialog = ref(false);
-const siteList = ref<SiteEntry[]>([]);
-const siteName = ref('');
-const siteAddress = ref('');
-const siteType = ref('');
+const currentStep = ref(0)
+const showAddSiteDialog = ref(false)
+const siteList = ref<SiteEntry[]>([])
+const siteName = ref('')
+const siteAddress = ref('')
+const siteType = ref('')
 
 const steps = [
   { title: '사업장 추가 방법', singleColumn: true },
   { title: '사업장 등록', singleColumn: false },
-] as const;
+] as const
 
 const instructions = [
   { label: '사업장명 입력', description: "대시보드에서 '+' 버튼을 클릭하여 사업장명을 입력하세요" },
-  { label: '자동 매핑', description: '내부 DB와 공식 데이터(기상청, 환경부 등)가 자동으로 매핑됩니다' },
-  { label: '리스크 분석', description: 'AI가 물리적 리스크, 전환 리스크, ESG를 자동 분석합니다' },
+  {
+    label: '자동 매핑',
+    description: '내부 DB와 공식 데이터(기상청, 환경부 등)가 자동으로 매핑됩니다',
+  },
+  {
+    label: '리스크 분석',
+    description: '물리적 리스크, 연평균 자산 손실률(AAL) 및 취약성을 분석합니다.',
+  },
   { label: '리포트 생성', description: '종합 리포트가 자동으로 생성되어 다운로드 가능합니다' },
-];
+]
 
-const currentStepData = computed(
-  () => steps[currentStep.value] ?? steps[0]
-);
+const currentStepData = computed(() => steps[currentStep.value] ?? steps[0])
 
 const resetFlow = () => {
-  currentStep.value = 0;
-  siteList.value = [];
-  siteName.value = '';
-  siteAddress.value = '';
-  siteType.value = '';
-  showAddSiteDialog.value = false;
-};
+  currentStep.value = 0
+  siteList.value = []
+  siteName.value = ''
+  siteAddress.value = ''
+  siteType.value = ''
+  showAddSiteDialog.value = false
+}
 
 watch(
   () => props.isOpen,
   (open) => {
     if (!open) {
-      resetFlow();
+      resetFlow()
     }
-  }
-);
+  },
+)
 
 const handleNext = () => {
   if (currentStep.value < steps.length - 1) {
-    currentStep.value += 1;
+    currentStep.value += 1
   } else {
-    emit('complete');
-    resetFlow();
+    emit('complete')
+    resetFlow()
   }
-};
+}
 
 const handlePrev = () => {
   if (currentStep.value > 0) {
-    currentStep.value -= 1;
+    currentStep.value -= 1
   }
-};
+}
 
 const handleModalChange = (open: boolean) => {
   if (!open) {
-    emit('close');
+    // X 버튼 클릭 시 로그아웃 처리
+    authStore.handleLogout()
   }
-};
+}
 
 const handleDeleteSite = (id: string) => {
-  siteList.value = siteList.value.filter((site) => site.id !== id);
-};
+  siteList.value = siteList.value.filter((site) => site.id !== id)
+}
 
 const handleAddSite = () => {
-  if (!siteName.value || !siteAddress.value || !siteType.value) return;
+  if (!siteName.value || !siteAddress.value || !siteType.value) return
 
   siteList.value = [
     ...siteList.value,
@@ -101,17 +104,15 @@ const handleAddSite = () => {
       address: siteAddress.value,
       type: siteType.value,
     },
-  ];
+  ]
 
-  siteName.value = '';
-  siteAddress.value = '';
-  siteType.value = '';
-  showAddSiteDialog.value = false;
-};
+  siteName.value = ''
+  siteAddress.value = ''
+  siteType.value = ''
+  showAddSiteDialog.value = false
+}
 
-const isAddDisabled = computed(
-  () => !siteName.value || !siteAddress.value || !siteType.value
-);
+const isAddDisabled = computed(() => !siteName.value || !siteAddress.value || !siteType.value)
 </script>
 
 <template>
@@ -139,9 +140,7 @@ const isAddDisabled = computed(
 
         <div class="p-8">
           <div v-if="currentStep === 0" class="max-w-2xl mx-auto">
-            <h3 class="text-xl text-gray-800 mb-6 text-center">
-              사업장 추가는 이렇게 해요
-            </h3>
+            <h3 class="text-xl text-gray-800 mb-6 text-center">사업장 추가는 이렇게 해요</h3>
             <div class="space-y-6">
               <div
                 v-for="(instruction, index) in instructions"
@@ -175,9 +174,7 @@ const isAddDisabled = computed(
                   <Building2 :size="32" class="text-gray-400" />
                 </div>
                 <p class="text-gray-500 mb-2">등록된 사업장이 없습니다</p>
-                <p class="text-sm text-gray-400">
-                  오른쪽 '+' 버튼을 눌러 첫 사업장을 추가해보세요
-                </p>
+                <p class="text-sm text-gray-400">오른쪽 '+' 버튼을 눌러 첫 사업장을 추가해보세요</p>
               </div>
               <div v-else class="space-y-3">
                 <div
@@ -199,9 +196,7 @@ const isAddDisabled = computed(
                     {{ site.address }}
                   </div>
                   <div class="flex gap-2">
-                    <span
-                      class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded"
-                    >
+                    <span class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
                       {{ site.type }}
                     </span>
                   </div>
@@ -216,9 +211,7 @@ const isAddDisabled = computed(
                   class="w-32 h-32 mx-auto mb-4 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-[#dc042b] hover:bg-[#dc042b]/5 transition-colors cursor-pointer"
                 >
                   <div class="text-gray-400 hover:text-[#dc042b] transition-colors">
-                    <div
-                      class="w-12 h-12 mx-auto mb-2 flex items-center justify-center text-4xl"
-                    >
+                    <div class="w-12 h-12 mx-auto mb-2 flex items-center justify-center text-4xl">
                       +
                     </div>
                     <p class="text-sm">사업장 추가</p>
@@ -254,9 +247,7 @@ const isAddDisabled = computed(
     <Dialog :open="showAddSiteDialog" @update:open="showAddSiteDialog = $event">
       <DialogContent class="max-w-lg">
         <DialogTitle>사업장 추가</DialogTitle>
-        <DialogDescription>
-          새로운 사업장 정보를 입력하세요
-        </DialogDescription>
+        <DialogDescription> 새로운 사업장 정보를 입력하세요 </DialogDescription>
 
         <div class="space-y-5 mt-6">
           <div>
