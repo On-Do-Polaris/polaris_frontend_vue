@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { X } from 'lucide-vue-next'
+import { useAuthStore } from '@/store/auth'
+
+const authStore = useAuthStore()
 
 interface Props {
   title: string
@@ -27,7 +30,8 @@ const emit = defineEmits<{
 }>()
 
 const handleClose = () => {
-  emit('close')
+  // X 버튼 클릭 시 로그아웃 처리 후 로그인 페이지로 이동
+  authStore.handleLogout()
 }
 
 const handlePrev = () => {

@@ -47,7 +47,7 @@
         <div class="flex-1">
           <h4 class="font-semibold text-gray-900 mb-1">리스크 분석</h4>
           <p class="text-sm text-gray-600">
-            AI가 물리적 리스크, 전환 리스크, ESG를 자동 분석합니다
+            물리적 리스크, 연평균 자산 손실률(AAL) 및 취약성을 분석합니다.
           </p>
         </div>
       </div>
@@ -61,9 +61,7 @@
         </div>
         <div class="flex-1">
           <h4 class="font-semibold text-gray-900 mb-1">리포트 생성</h4>
-          <p class="text-sm text-gray-600">
-            종합 리포트가 자동으로 생성되어 다운로드 가능합니다
-          </p>
+          <p class="text-sm text-gray-600">종합 리포트가 자동으로 생성되어 다운로드 가능합니다</p>
         </div>
       </div>
     </div>

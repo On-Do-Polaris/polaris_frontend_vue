@@ -36,13 +36,11 @@ const tabs = [
   { id: 'overview', label: '개요' },
   { id: 'ssp', label: 'SSP' },
   { id: 'financial', label: '재무 영향' },
-  { id: 'vulnerability', label: '취약성' }
+  { id: 'vulnerability', label: '취약성' },
 ]
 
 const sites = computed(() => sitesStore.allSites)
-const currentSite = computed(() =>
-  sites.value.find((s) => s.siteId === selectedSiteId.value)
-)
+const currentSite = computed(() => sites.value.find((s) => s.siteId === selectedSiteId.value))
 
 // selectedSiteId 변경 시 uiStore 업데이트
 watch(selectedSiteId, (newId) => {
@@ -88,7 +86,8 @@ const goToDashboard = () => {
           <div>
             <h2 class="text-gray-900 text-xl">분석</h2>
             <p class="text-sm text-gray-600 mt-1">
-              선택한 사업장의 물리적 리스크, 전환 리스크, ESG 진단 결과를 확인할 수 있습니다.
+              선택한 사업장의 물리적 리스크, 연평균 자산 손신률(AAL) 및 취약성 분석 결과를 확인할 수
+              있습니다.
             </p>
           </div>
           <div class="relative">
@@ -118,7 +117,7 @@ const goToDashboard = () => {
               @click="activeTab = tab.id"
               :class="[
                 'px-5 pb-2.5 pt-0 text-sm transition-colors relative',
-                activeTab === tab.id ? 'text-[#EA002C]' : 'text-gray-600 hover:text-gray-900'
+                activeTab === tab.id ? 'text-[#EA002C]' : 'text-gray-600 hover:text-gray-900',
               ]"
             >
               {{ tab.label }}
