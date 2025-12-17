@@ -53,7 +53,7 @@ const handleVerifyCode = async () => {
   try {
     const response = await authAPI.verifyPasswordResetCode({
       email: email.value,
-      code: verificationCode.value
+      code: verificationCode.value,
     })
     step.value = 3
     toast.success(response.message || '이메일 인증이 완료되었습니다.')
@@ -80,7 +80,7 @@ const handleChangePassword = async () => {
   try {
     const response = await authAPI.completePasswordReset({
       email: email.value,
-      newPassword: password.value
+      newPassword: password.value,
     })
     toast.success(response.message || '비밀번호가 변경되었습니다.')
 
@@ -220,7 +220,7 @@ const goToLogin = () => {
             disabled
             class="w-full bg-gray-300 text-gray-500 py-3 cursor-not-allowed text-center mt-6"
           >
-            회원가입
+            비밀번호 변경
           </button>
           <button
             v-else
