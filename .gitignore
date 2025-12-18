@@ -49,3 +49,6 @@ __screenshots__/
 
 # guide
 tmp_docs/*
+
+# test case
+TC/*
