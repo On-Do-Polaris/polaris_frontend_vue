@@ -52,9 +52,39 @@ const disasterLevels = [
   { label: '경보', value: '경보' },
 ]
 
-// 재해 데이터
-const disasters = ref<PastDisasterItem[]>([])
+// 백엔드 응답 데이터 원본
+const rawDisasters = ref<any[]>([])
 const isLoading = ref(false)
+
+// 날짜 포맷팅 함수 (ISO 8601 -> YYYY.MM.DD)
+const formatDate = (isoDateString: string): string => {
+  if (!isoDateString) return ''
+  // "2025-12-15T00:00:00"에서 "T" 기준으로 분리하여 날짜 부분만 추출
+  const datePart = isoDateString.split('T')[0]
+  // "2025-12-15"를 "2025.12.15"로 변환
+  return datePart.replace(/-/g, '.')
+}
+
+// 지역 문자열을 배열로 변환하는 함수
+const parseRegions = (regionString: string): string[] => {
+  if (!regionString) return []
+  // 쉼표와 공백을 기준으로 분리하고, 빈 문자열 제거
+  return regionString
+    .split(',')
+    .map((region) => region.trim())
+    .filter((region) => region.length > 0)
+}
+
+// 전처리된 재해 데이터 (computed로 자동 변환)
+const disasters = computed<PastDisasterItem[]>(() => {
+  return rawDisasters.value.map((item) => ({
+    id: item.id,
+    date: formatDate(item.alertDate),
+    disaster_type: item.disasterType,
+    severity: item.severity,
+    region: parseRegions(item.region),
+  }))
+})
 
 // 조회 핸들러
 const handleSearch = async () => {
@@ -77,7 +107,8 @@ const handleSearch = async () => {
 
     const response = await disasterHistoryAPI.getPastDisasters(params)
 
-    disasters.value = response.data.items
+    // 백엔드에서 오는 원본 데이터 저장
+    rawDisasters.value = response.data
   } catch (error) {
     console.error('Failed to fetch disasters:', error)
     toast.error('재해 이력 조회에 실패했습니다')
@@ -259,8 +290,8 @@ const goToDashboard = () => {
 
         <div v-else class="grid grid-cols-2 gap-6 max-h-[calc(100vh-400px)] overflow-y-auto pr-2">
           <div
-            v-for="(disaster, index) in disasters"
-            :key="index"
+            v-for="disaster in disasters"
+            :key="disaster.id"
             class="bg-white border border-gray-200 shadow-sm p-6"
           >
             <!-- 상단: 날짜, 재해 유형, 재해 수준 -->

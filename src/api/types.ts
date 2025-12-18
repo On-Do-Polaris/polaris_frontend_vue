@@ -190,9 +190,25 @@ export interface SSPScenarioScore {
   longTerm: LongTermScore
 }
 
-export interface ShortTermScore { q1: number; q2: number; q3: number; q4: number }
-export interface MidTermScore { year2026: number; year2027: number; year2028: number; year2029: number; year2030: number }
-export interface LongTermScore { year2020s: number; year2030s: number; year2040s: number; year2050s: number }
+export interface ShortTermScore {
+  q1: number
+  q2: number
+  q3: number
+  q4: number
+}
+export interface MidTermScore {
+  year2026: number
+  year2027: number
+  year2028: number
+  year2029: number
+  year2030: number
+}
+export interface LongTermScore {
+  year2020s: number
+  year2030s: number
+  year2040s: number
+  year2050s: number
+}
 
 // SSP 물리적 리스크 (신규 API 응답)
 export interface PhysicalRiskResponse {
@@ -250,9 +266,25 @@ export interface SSPScenarioImpact {
   longTerm: LongTermAAL
 }
 // AAL 값 (구조는 Score와 동일하나 의미가 다름)
-export interface ShortTermAAL { q1: number; q2: number; q3: number; q4: number }
-export interface MidTermAAL { year2026: number; year2027: number; year2028: number; year2029: number; year2030: number }
-export interface LongTermAAL { year2020s: number; year2030s: number; year2040s: number; year2050s: number }
+export interface ShortTermAAL {
+  q1: number
+  q2: number
+  q3: number
+  q4: number
+}
+export interface MidTermAAL {
+  year2026: number
+  year2027: number
+  year2028: number
+  year2029: number
+  year2030: number
+}
+export interface LongTermAAL {
+  year2020s: number
+  year2030s: number
+  year2040s: number
+  year2050s: number
+}
 
 // 취약성
 export interface VulnerabilityResponse {
@@ -498,7 +530,14 @@ export interface StructuredDataResponse {
 // 10. 재해 이력 (Disaster History)
 // ============================================================================
 
-export type DisasterType = 'TYPHOON' | 'HEAVY_RAIN' | 'HEAVY_SNOW' | 'STRONG_WIND' | 'WIND_WAVE' | 'EARTHQUAKE' | 'OTHER'
+export type DisasterType =
+  | 'TYPHOON'
+  | 'HEAVY_RAIN'
+  | 'HEAVY_SNOW'
+  | 'STRONG_WIND'
+  | 'WIND_WAVE'
+  | 'EARTHQUAKE'
+  | 'OTHER'
 export type DamageSeverity = 'MINOR' | 'MODERATE' | 'SEVERE' | 'CATASTROPHIC'
 
 export interface DisasterHistoryItem {
@@ -530,23 +569,32 @@ export interface DisasterHistoryResponse {
   size: number
 }
 
-// 과거 재해 이력 조회 (/api/past)
+// 과거 재해 이력 조회 (/api/disasters/history)
 export interface PastDisasterQueryParams {
   year?: string
   disaster_type?: string
   severity?: string
 }
 
-export interface PastDisasterItem {
+// 백엔드에서 받는 원본 데이터 타입
+export interface PastDisasterRawItem {
   id: number
-  date: string
-  disaster_type: string
-  severity: string
-  region: string[]
+  alertDate: string // ISO 8601 형식 (예: "2025-12-15T00:00:00")
+  disasterType: string // 재해 유형
+  severity: string // 재해 수준 (주의보/경보)
+  region: string // 쉼표로 구분된 지역 문자열
 }
 
+// 프론트엔드에서 사용하는 전처리된 데이터 타입
+export interface PastDisasterItem {
+  id: number
+  date: string // 포맷된 날짜 (예: "2025.12.15")
+  disaster_type: string // 재해 유형
+  severity: string // 재해 수준
+  region: string[] // 지역 배열
+}
+
+// API 응답 타입
 export interface PastDisasterResponse {
-  data: {
-    items: PastDisasterItem[]
-  }
+  data: PastDisasterRawItem[]
 }
