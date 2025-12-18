@@ -142,6 +142,13 @@ const handleSearch = async () => {
       params.severity = selectedDisasterLevel.value
     }
 
+    console.log('[PastDisasterView] Selected values:', {
+      selectedYear: selectedYear.value,
+      selectedDisasterType: selectedDisasterType.value,
+      selectedDisasterLevel: selectedDisasterLevel.value,
+    })
+    console.log('[PastDisasterView] API params:', params)
+
     const response = await disasterHistoryAPI.getPastDisasters(params)
 
     // 백엔드에서 오는 원본 데이터 저장
