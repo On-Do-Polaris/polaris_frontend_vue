@@ -76,7 +76,8 @@ const physicalRisks = computed(() => {
   return hazardTypes.value
     .map((hazard) => {
       const scoreData = scores[hazard.code]
-      if (!scoreData) return null
+      // undefined나 null일 때만 제외 (0은 유효한 값)
+      if (scoreData === undefined || scoreData === null) return null
 
       // scoreData가 객체 형태 { total, h, e, v } 인 경우
       let totalScore = 0
