@@ -572,7 +572,7 @@ export interface DisasterHistoryResponse {
 // 과거 재해 이력 조회 (/api/disasters/history)
 export interface PastDisasterQueryParams {
   year?: string
-  disaster_type?: string
+  disasterType?: string
   severity?: string
 }
 
@@ -589,7 +589,7 @@ export interface PastDisasterRawItem {
 export interface PastDisasterItem {
   id: number
   date: string // 포맷된 날짜 (예: "2025.12.15")
-  disaster_type: string // 재해 유형
+  disasterType: string // 재해 유형
   severity: string // 재해 수준
   region: string[] // 지역 배열
 }

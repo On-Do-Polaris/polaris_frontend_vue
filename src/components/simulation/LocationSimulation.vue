@@ -417,7 +417,20 @@ const aalProfileChartData = computed(() => ({
   ],
 }))
 
-const radarChartOptions = {
+// 리스크 데이터의 최댓값 계산
+const maxRiskValue = computed(() => {
+  const allValues = [...currentSiteRisks.value, ...candidateRisks.value]
+  if (allValues.length === 0) return 100
+
+  const max = Math.max(...allValues)
+  // 최댓값이 0이면 기본값 사용
+  if (max <= 0) return 100
+
+  // 최댓값이 100 이하면 100 사용, 아니면 여유를 두고 1.2배
+  return max <= 100 ? 100 : Math.ceil(max * 1.2)
+})
+
+const riskRadarChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -428,10 +441,39 @@ const radarChartOptions = {
   scales: {
     r: {
       beginAtZero: true,
-      max: 100,
+      max: maxRiskValue.value,
     },
   },
-}
+}))
+
+// AAL 데이터의 최댓값 계산
+const maxAalValue = computed(() => {
+  const allValues = [...currentSiteAals.value, ...candidateAals.value]
+  if (allValues.length === 0) return 0.1
+
+  const max = Math.max(...allValues)
+  // 최댓값이 0이거나 매우 작으면 기본값 사용
+  if (max <= 0) return 0.1
+
+  // 여유를 두기 위해 1.2배 적용
+  return max * 1.2
+})
+
+const aalRadarChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom' as const,
+    },
+  },
+  scales: {
+    r: {
+      beginAtZero: true,
+      max: maxAalValue.value,
+    },
+  },
+}))
 
 // 지도에 마커 업데이트
 const updateMapMarkers = () => {
@@ -716,7 +758,7 @@ watch(selectedCandidateIndex, () => {
             <Radar
               :key="`risk-${selectedCandidateIndex}`"
               :data="riskProfileChartData"
-              :options="radarChartOptions"
+              :options="riskRadarChartOptions"
             />
           </div>
         </div>
@@ -730,7 +772,7 @@ watch(selectedCandidateIndex, () => {
             <Radar
               :key="`aal-${selectedCandidateIndex}`"
               :data="aalProfileChartData"
-              :options="radarChartOptions"
+              :options="aalRadarChartOptions"
             />
           </div>
         </div>

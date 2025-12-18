@@ -275,8 +275,51 @@ const chartData = computed(() => {
   }
 })
 
+// Y축 스케일 계산 (동적 min-max)
+const calculateYScale = (): { min: number; max: number } => {
+  const data = sspData.value
+  if (!data) return { min: 0, max: 100 }
+
+  const allValues: number[] = []
+
+  // 모든 시나리오의 값을 수집
+  const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
+  scenarios.forEach((scenario) => {
+    if (scenario) {
+      Object.values(scenario).forEach((value: any) => {
+        if (typeof value === 'object' && value !== null && 'total' in value) {
+          allValues.push(value.total)
+        } else if (typeof value === 'number') {
+          allValues.push(value)
+        }
+      })
+    }
+  })
+
+  if (allValues.length === 0) return { min: 0, max: 100 }
+
+  const minValue = Math.min(...allValues)
+  const maxValue = Math.max(...allValues)
+
+  // 모든 값이 같으면 범위를 설정
+  if (minValue === maxValue) {
+    return { min: Math.max(0, minValue - 10), max: minValue + 10 }
+  }
+
+  // 여유를 두기 위해 범위의 10% 패딩 추가
+  const range = maxValue - minValue
+  const padding = range * 0.1
+
+  return {
+    min: Math.max(0, Math.floor(minValue - padding)),
+    max: Math.ceil(maxValue + padding),
+  }
+}
+
 const chartOptions = computed(() => {
   const data = sspData.value
+  const yScale = calculateYScale()
+
   if (!data) {
     return {
       responsive: true,
@@ -295,8 +338,8 @@ const chartOptions = computed(() => {
             display: true,
             text: '리스크 점수',
           },
-          min: 0,
-          max: 100,
+          min: yScale.min,
+          max: yScale.max,
         },
       },
     }
@@ -321,8 +364,8 @@ const chartOptions = computed(() => {
             display: true,
             text: '리스크 점수',
           },
-          min: 0,
-          max: 100,
+          min: yScale.min,
+          max: yScale.max,
         },
       },
     }
@@ -392,8 +435,8 @@ const chartOptions = computed(() => {
           display: true,
           text: '리스크 점수',
         },
-        min: 0,
-        max: 100,
+        min: yScale.min,
+        max: yScale.max,
       },
     },
   }
