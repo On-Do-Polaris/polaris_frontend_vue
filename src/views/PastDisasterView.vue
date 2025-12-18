@@ -76,15 +76,51 @@ const parseRegions = (regionString: string): string[] => {
     .filter((region) => region.length > 0)
 }
 
+// 그룹화 키 생성 함수 (날짜 + 재해유형 + 수준)
+const getGroupKey = (item: PastDisasterRawItem): string => {
+  return `${item.alertDate}_${item.disasterType}_${item.severity}`
+}
+
 // 전처리된 재해 데이터 (computed로 자동 변환)
+// 같은 날짜, 재해유형, 수준을 가진 항목들을 그룹화하여 지역만 합침
 const disasters = computed<PastDisasterItem[]>(() => {
-  return rawDisasters.value.map((item) => ({
-    id: item.id,
-    date: formatDate(item.alertDate),
-    disaster_type: item.disasterType,
-    severity: item.severity,
-    region: parseRegions(item.region),
-  }))
+  // 1. 날짜 + 재해유형 + 수준으로 그룹화
+  const grouped = new Map<string, PastDisasterRawItem[]>()
+
+  rawDisasters.value.forEach((item) => {
+    const key = getGroupKey(item)
+    if (!grouped.has(key)) {
+      grouped.set(key, [])
+    }
+    grouped.get(key)!.push(item)
+  })
+
+  // 2. 그룹화된 데이터를 PastDisasterItem으로 변환
+  const result: PastDisasterItem[] = []
+  let idCounter = 1
+
+  grouped.forEach((items) => {
+    if (items.length === 0) return // 빈 배열 방어 처리
+
+    const firstItem = items[0]
+    if (!firstItem) return // undefined 체크
+
+    // 모든 항목의 지역을 파싱하여 하나의 배열로 합침
+    const allRegions = items
+      .map((item) => parseRegions(item.region))
+      .flat()
+      .filter((region) => region.length > 0) // 빈 문자열 제거
+
+    result.push({
+      id: idCounter++,
+      date: formatDate(firstItem.alertDate),
+      disaster_type: firstItem.disasterType,
+      severity: firstItem.severity,
+      region: allRegions,
+    })
+  })
+
+  return result
 })
 
 // 조회 핸들러
