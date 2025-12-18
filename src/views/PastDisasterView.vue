@@ -5,7 +5,7 @@ import { useUiStore } from '@/store/ui'
 import { ChevronDown, AlertTriangle } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { disasterHistoryAPI } from '@/api/disasterHistory'
-import type { PastDisasterItem, PastDisasterQueryParams } from '@/api/types'
+import type { PastDisasterItem, PastDisasterQueryParams, PastDisasterRawItem } from '@/api/types'
 import { toast } from 'vue-sonner'
 
 console.log('[PastDisasterView] Component loaded')
@@ -53,7 +53,7 @@ const disasterLevels = [
 ]
 
 // 백엔드 응답 데이터 원본
-const rawDisasters = ref<any[]>([])
+const rawDisasters = ref<PastDisasterRawItem[]>([])
 const isLoading = ref(false)
 
 // 날짜 포맷팅 함수 (ISO 8601 -> YYYY.MM.DD)
@@ -61,6 +61,7 @@ const formatDate = (isoDateString: string): string => {
   if (!isoDateString) return ''
   // "2025-12-15T00:00:00"에서 "T" 기준으로 분리하여 날짜 부분만 추출
   const datePart = isoDateString.split('T')[0]
+  if (!datePart) return ''
   // "2025-12-15"를 "2025.12.15"로 변환
   return datePart.replace(/-/g, '.')
 }
