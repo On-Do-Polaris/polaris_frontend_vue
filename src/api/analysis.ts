@@ -32,11 +32,17 @@ export const analysisAPI = {
 
   // 분석 개요 조회 (SSP2-2024 기준)
   getAnalysisSummary: async (siteId: string): Promise<AnalysisSummaryResponse> => {
-    const response = await apiClient.get<{ result: string; data: AnalysisSummaryResponse }>(
+    const response = await apiClient.get<{
+      result: string
+      data: {
+        result: string
+        data: AnalysisSummaryResponse
+      }
+    }>(
       '/analysis/summary',
       { params: { siteId } }
     )
-    return response.data.data
+    return response.data.data.data
   },
 
   startAnalysis: async (siteId: string, data: StartAnalysisRequest): Promise<AnalysisJobStatusResponse> => {

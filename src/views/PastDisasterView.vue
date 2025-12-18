@@ -114,7 +114,7 @@ const disasters = computed<PastDisasterItem[]>(() => {
     result.push({
       id: idCounter++,
       date: formatDate(firstItem.alertDate),
-      disaster_type: firstItem.disasterType,
+      disasterType: firstItem.disasterType,
       severity: firstItem.severity,
       region: allRegions,
     })
@@ -135,7 +135,7 @@ const handleSearch = async () => {
     }
 
     if (selectedDisasterType.value !== '0000') {
-      params.disaster_type = selectedDisasterType.value
+      params.disasterType = selectedDisasterType.value
     }
 
     if (selectedDisasterLevel.value !== '0000') {
@@ -337,7 +337,7 @@ const goToDashboard = () => {
                 <p class="text-3xl text-gray-900 font-semibold">{{ disaster.date }}</p>
               </div>
               <div class="text-center">
-                <p class="text-3xl text-gray-900 font-semibold">{{ disaster.disaster_type }}</p>
+                <p class="text-3xl text-gray-900 font-semibold">{{ disaster.disasterType }}</p>
               </div>
               <div class="text-center">
                 <p class="text-3xl font-semibold" :class="getSeverityColor(disaster.severity)">

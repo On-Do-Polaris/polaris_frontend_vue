@@ -253,27 +253,76 @@ const chartData = computed(() => {
   }
 })
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom' as const,
-    },
-    title: {
-      display: false,
-    },
-  },
-  scales: {
-    y: {
-      title: {
-        display: true,
-        text: 'AAL (연간 평균 손실)',
-      },
-      min: 0,
-    },
-  },
+// Y축 스케일 계산 (동적 min-max)
+const calculateYScale = (): { min: number; max: number } => {
+  const data = aalData.value
+  if (!data) return { min: 0, max: 0.1 }
+
+  const allValues: number[] = []
+
+  // 모든 시나리오의 값을 수집
+  const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
+  scenarios.forEach((scenario) => {
+    if (scenario) {
+      Object.values(scenario).forEach((value: any) => {
+        if (typeof value === 'number') {
+          allValues.push(value)
+        }
+      })
+    }
+  })
+
+  if (allValues.length === 0) return { min: 0, max: 0.1 }
+
+  const minValue = Math.min(...allValues)
+  const maxValue = Math.max(...allValues)
+
+  // 모든 값이 같으면 범위를 설정
+  if (minValue === maxValue) {
+    const value = minValue
+    // 매우 작은 값인 경우
+    if (value < 0.01) {
+      return { min: 0, max: value * 2 }
+    }
+    return { min: Math.max(0, value - value * 0.2), max: value + value * 0.2 }
+  }
+
+  // 여유를 두기 위해 범위의 10% 패딩 추가
+  const range = maxValue - minValue
+  const padding = range * 0.1
+
+  return {
+    min: Math.max(0, minValue - padding),
+    max: maxValue + padding,
+  }
 }
+
+const chartOptions = computed(() => {
+  const yScale = calculateYScale()
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+      },
+      title: {
+        display: false,
+      },
+    },
+    scales: {
+      y: {
+        title: {
+          display: true,
+          text: 'AAL (연간 평균 손실)',
+        },
+        min: yScale.min,
+        max: yScale.max,
+      },
+    },
+  }
+})
 
 // 재무 영향
 const financialReason = computed(() => {
