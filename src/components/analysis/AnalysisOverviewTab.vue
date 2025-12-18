@@ -150,6 +150,35 @@ const chartData = computed(() => ({
   ],
 }))
 
+// MinMax 스케일링을 위한 범위 계산
+const yAxisRange = computed(() => {
+  const scores = physicalRisks.value.map((d) => d.score)
+
+  if (scores.length === 0) {
+    return { min: 0, max: 100 }
+  }
+
+  const min = Math.min(...scores)
+  const max = Math.max(...scores)
+
+  // 모든 값이 같은 경우
+  if (min === max) {
+    return {
+      min: Math.max(0, min - 10),
+      max: Math.min(100, max + 10),
+    }
+  }
+
+  // 범위의 10%를 padding으로 추가
+  const range = max - min
+  const padding = range * 0.1
+
+  return {
+    min: Math.max(0, Math.floor(min - padding)),
+    max: Math.min(100, Math.ceil(max + padding)),
+  }
+})
+
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
@@ -208,8 +237,8 @@ const chartOptions = computed(() => ({
           size: 12,
         },
       },
-      min: 0,
-      max: 100,
+      min: yAxisRange.value.min,
+      max: yAxisRange.value.max,
     },
   },
 }))
