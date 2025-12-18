@@ -6,6 +6,7 @@ import { toast } from 'vue-sonner'
 import skLogo from '@/assets/sk-logo.png'
 import { useAuthStore } from '@/store/auth'
 import { TokenManager } from '@/utils/tokenManager'
+import { analysisAPI } from '@/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -42,7 +43,24 @@ const handleSubmit = async () => {
 
     toast.success('로그인 성공')
 
-    // 대시보드로 이동
+    // 분석 상태 확인
+    try {
+      const statusResponse = await analysisAPI.getOverallAnalysisStatus()
+      const status = statusResponse.data.status
+
+      console.log('[LoginView] Analysis status:', status)
+
+      // 상태가 'ing'면 AnalysisWaitingView로 이동
+      if (status === 'ing') {
+        router.push('/analysis-waiting')
+        return
+      }
+    } catch (error) {
+      console.error('[LoginView] Failed to check analysis status:', error)
+      // 상태 확인 실패 시에도 대시보드로 이동
+    }
+
+    // 상태가 'ing'가 아니면 대시보드로 이동
     const redirect = route.query.redirect as string
     router.push(redirect || '/')
   } catch (error: any) {
