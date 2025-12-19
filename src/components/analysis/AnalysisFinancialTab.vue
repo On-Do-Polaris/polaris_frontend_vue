@@ -253,24 +253,36 @@ const chartData = computed(() => {
   }
 })
 
-// Y축 스케일 계산 (min-max 스케일링)
+// Y축 스케일 계산 (min-max 스케일링 - aal-scores 기준)
 const calculateYScale = (): { min: number; max: number } => {
   const data = aalData.value
   if (!data) return { min: 0, max: 0.1 }
 
   const allValues: number[] = []
 
-  // 모든 시나리오의 값을 수집 (0보다 큰 값만)
-  const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
-  scenarios.forEach((scenario) => {
-    if (scenario) {
-      Object.values(scenario).forEach((value: any) => {
-        if (typeof value === 'number' && value > 0) {
-          allValues.push(value)
-        }
-      })
-    }
-  })
+  // aal-scores 필드에서 값을 수집 (0보다 큰 값만)
+  const aalScores = (data as any)['aal-scores']
+  if (aalScores && typeof aalScores === 'object') {
+    Object.values(aalScores).forEach((value: any) => {
+      if (typeof value === 'number' && value > 0) {
+        allValues.push(value)
+      }
+    })
+  }
+
+  // aal-scores가 없으면 기존 scenarios 데이터 사용 (fallback)
+  if (allValues.length === 0) {
+    const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
+    scenarios.forEach((scenario) => {
+      if (scenario) {
+        Object.values(scenario).forEach((value: any) => {
+          if (typeof value === 'number' && value > 0) {
+            allValues.push(value)
+          }
+        })
+      }
+    })
+  }
 
   if (allValues.length === 0) return { min: 0, max: 0.1 }
 
