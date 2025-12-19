@@ -517,9 +517,7 @@ watch(currentRegionScores, () => {
 
             <!-- 세 번째 행: AAL 변화 -->
             <div class="flex items-start justify-between gap-2">
-              <div class="text-xs text-gray-600 leading-tight">
-                평균 기온 변화에 따른 사업장의 연평균 재무 손실률(AAL) 변화
-              </div>
+              <div class="text-xs text-gray-600 leading-tight">연평균 재무 손실률(AAL) 변화</div>
               <div class="text-base font-medium text-[#EA002C] flex-shrink-0">
                 {{ site.aalIncrease }}
               </div>
