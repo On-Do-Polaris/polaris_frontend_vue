@@ -275,26 +275,38 @@ const chartData = computed(() => {
   }
 })
 
-// Y축 스케일 계산 (동적 min-max)
+// Y축 스케일 계산 (min-max 스케일링 - physical-risk-scores 기준)
 const calculateYScale = (): { min: number; max: number } => {
   const data = sspData.value
   if (!data) return { min: 0, max: 100 }
 
   const allValues: number[] = []
 
-  // 모든 시나리오의 값을 수집
-  const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
-  scenarios.forEach((scenario) => {
-    if (scenario) {
-      Object.values(scenario).forEach((value: any) => {
-        if (typeof value === 'object' && value !== null && 'total' in value) {
-          allValues.push(value.total)
-        } else if (typeof value === 'number') {
-          allValues.push(value)
-        }
-      })
-    }
-  })
+  // physical-risk-scores 필드에서 값을 수집 (0보다 큰 값만)
+  const physicalRiskScores = (data as any)['physical-risk-scores']
+  if (physicalRiskScores && typeof physicalRiskScores === 'object') {
+    Object.values(physicalRiskScores).forEach((value: any) => {
+      if (typeof value === 'number' && value > 0) {
+        allValues.push(value)
+      }
+    })
+  }
+
+  // physical-risk-scores가 없으면 기존 scenarios 데이터 사용 (fallback)
+  if (allValues.length === 0) {
+    const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
+    scenarios.forEach((scenario) => {
+      if (scenario) {
+        Object.values(scenario).forEach((value: any) => {
+          if (typeof value === 'object' && value !== null && 'total' in value) {
+            allValues.push(value.total)
+          } else if (typeof value === 'number' && value > 0) {
+            allValues.push(value)
+          }
+        })
+      }
+    })
+  }
 
   if (allValues.length === 0) return { min: 0, max: 100 }
 
@@ -306,9 +318,9 @@ const calculateYScale = (): { min: number; max: number } => {
     return { min: Math.max(0, minValue - 10), max: minValue + 10 }
   }
 
-  // 여유를 두기 위해 범위의 10% 패딩 추가
+  // min-max 스케일링: 범위의 20% 패딩 추가 (차이를 더 명확하게)
   const range = maxValue - minValue
-  const padding = range * 0.1
+  const padding = Math.max(range * 0.2, 5) // 최소 5의 여유
 
   return {
     min: Math.max(0, Math.floor(minValue - padding)),
@@ -338,6 +350,7 @@ const chartOptions = computed(() => {
             display: true,
             text: '리스크 점수',
           },
+          beginAtZero: false,
           min: yScale.min,
           max: yScale.max,
         },
@@ -364,6 +377,7 @@ const chartOptions = computed(() => {
             display: true,
             text: '리스크 점수',
           },
+          beginAtZero: false,
           min: yScale.min,
           max: yScale.max,
         },
@@ -435,6 +449,7 @@ const chartOptions = computed(() => {
           display: true,
           text: '리스크 점수',
         },
+        beginAtZero: false,
         min: yScale.min,
         max: yScale.max,
       },
