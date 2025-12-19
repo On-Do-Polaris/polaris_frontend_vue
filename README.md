@@ -1,13 +1,13 @@
 # SKAX Climate Physical Risk Analysis Service - Frontend
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/skax/climate-risk-frontend)
+[![Version](https://img.shields.io/badge/version-0.0.0-blue.svg)](https://github.com/skax/climate-risk-frontend)
 [![Vue](https://img.shields.io/badge/vue-3.5.22-green.svg)](https://vuejs.org/)
-[![TypeScript](https://img.shields.io/badge/typescript-5.9.0-blue.svg)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/typescript-5.9.3-blue.svg)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 
 **사업장별 기후 물리적 리스크 분석 서비스 - 웹 애플리케이션**
 
-기준일 : 25-12-18 (목)
+기준일 : 25-12-19 (금)
 
 SKAX의 기후 물리적 리스크 분석 서비스 프론트엔드는 Vue 3와 TypeScript 기반의 현대적인 웹 애플리케이션으로, 사업장별 기후 리스크 데이터를 직관적으로 시각화하고 분석할 수 있습니다.
 
@@ -57,9 +57,10 @@ SKAX의 기후 물리적 리스크 분석 서비스 프론트엔드는 Vue 3와 
 **프레임워크 & 라이브러리**
 
 - Vue 3.5.22 (Composition API)
-- TypeScript 5.9.0
+- TypeScript 5.9.3
 - Vue Router 4.6.3 (라우팅)
 - Pinia 3.0.3 (상태 관리)
+- Axios 1.13.2 (HTTP 클라이언트)
 
 **UI & 스타일**
 
@@ -67,11 +68,14 @@ SKAX의 기후 물리적 리스크 분석 서비스 프론트엔드는 Vue 3와 
 - shadcn-vue 2.3.2 (UI 컴포넌트)
 - Radix Vue 1.9.17 (헤드리스 컴포넌트)
 - Lucide Vue Next (아이콘)
+- Vue Sonner 2.0.9 (토스트 알림)
 
 **데이터 시각화**
 
 - Chart.js 4.5.1
 - Vue ChartJS 5.3.3
+- Vue3 OpenLayers 11.6.2 (지도)
+- Vue3 Easy Data Table 1.5.47 (데이터 테이블)
 
 **개발 도구**
 
@@ -134,22 +138,22 @@ npm run format
 
 ### 애플리케이션 구조
 
-| 레이어 | 구성 요소 | 설명 |
-| --- | --- | --- |
-| **Core** | Router | Vue Router 기반 페이지 라우팅 |
-| | State (Pinia) | auth, sites, ui 스토어 |
-| **Views** | Dashboard | 대시보드 페이지 |
-| | Analysis | 사업장 분석 페이지 |
-| | Simulation | 시뮬레이션 페이지 |
-| | Report | 리포트 페이지 |
-| | SiteManagement | 사업장 관리 페이지 |
-| | MyAccount | 계정 관리 페이지 |
-| **Components** | Charts | 차트 컴포넌트 (Chart.js) |
-| | Analysis Tabs | 분석 탭 컴포넌트 |
-| | Simulation | 시뮬레이션 컴포넌트 |
-| | UI (shadcn) | 공통 UI 컴포넌트 |
-| | Common | Header, OnboardingLayout 등 |
-| **Backend** | FastAPI | Climate Risk Analysis API |
+| 레이어         | 구성 요소      | 설명                          |
+| -------------- | -------------- | ----------------------------- |
+| **Core**       | Router         | Vue Router 기반 페이지 라우팅 |
+|                | State (Pinia)  | auth, sites, ui 스토어        |
+| **Views**      | Dashboard      | 대시보드 페이지               |
+|                | Analysis       | 사업장 분석 페이지            |
+|                | Simulation     | 시뮬레이션 페이지             |
+|                | Report         | 리포트 페이지                 |
+|                | SiteManagement | 사업장 관리 페이지            |
+|                | MyAccount      | 계정 관리 페이지              |
+| **Components** | Charts         | 차트 컴포넌트 (Chart.js)      |
+|                | Analysis Tabs  | 분석 탭 컴포넌트              |
+|                | Simulation     | 시뮬레이션 컴포넌트           |
+|                | UI (shadcn)    | 공통 UI 컴포넌트              |
+|                | Common         | Header, OnboardingLayout 등   |
+| **Backend**    | FastAPI        | Climate Risk Analysis API     |
 
 ### 상태 관리 (Pinia Stores)
 
@@ -407,20 +411,6 @@ npm run type-check
 rm -rf dist
 npm run build
 ```
-
-## 버전 히스토리
-
-### v1.0.0 (2025-11-13)
-
-- 초기 릴리스
-- Vue 3 + TypeScript 기반 웹 애플리케이션
-- Chart.js 기반 데이터 시각화
-- shadcn-vue + Tailwind CSS UI 시스템
-- 인증 시스템 (로그인/회원가입)
-- 반응형 디자인
-- 대시보드, 분석, 시뮬레이션, 리포트 페이지
-- Pinia 기반 상태 관리
-- Vite 빌드 시스템
 
 ## 기술 스택 및 라이브러리
 
