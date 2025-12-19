@@ -417,17 +417,30 @@ const aalProfileChartData = computed(() => ({
   ],
 }))
 
-// 리스크 데이터의 최댓값 계산
-const maxRiskValue = computed(() => {
-  const allValues = [...currentSiteRisks.value, ...candidateRisks.value]
-  if (allValues.length === 0) return 100
+// 리스크 데이터의 min-max 스케일링
+const riskScaleRange = computed(() => {
+  const allValues = [...currentSiteRisks.value, ...candidateRisks.value].filter((v) => v > 0)
 
+  if (allValues.length === 0) {
+    return { min: 0, max: 100 }
+  }
+
+  const min = Math.min(...allValues)
   const max = Math.max(...allValues)
-  // 최댓값이 0이면 기본값 사용
-  if (max <= 0) return 100
 
-  // 최댓값이 100 이하면 100 사용, 아니면 여유를 두고 1.2배
-  return max <= 100 ? 100 : Math.ceil(max * 1.2)
+  // 값이 모두 0이면 기본값
+  if (max <= 0) {
+    return { min: 0, max: 100 }
+  }
+
+  // min-max 범위 계산 (여유를 두기 위해 ±10% 적용)
+  const range = max - min
+  const padding = Math.max(range * 0.1, 5) // 최소 5의 여유
+
+  return {
+    min: Math.max(0, Math.floor(min - padding)),
+    max: Math.ceil(max + padding),
+  }
 })
 
 const riskRadarChartOptions = computed(() => ({
@@ -440,23 +453,37 @@ const riskRadarChartOptions = computed(() => ({
   },
   scales: {
     r: {
-      beginAtZero: true,
-      max: maxRiskValue.value,
+      beginAtZero: false,
+      min: riskScaleRange.value.min,
+      max: riskScaleRange.value.max,
     },
   },
 }))
 
-// AAL 데이터의 최댓값 계산
-const maxAalValue = computed(() => {
-  const allValues = [...currentSiteAals.value, ...candidateAals.value]
-  if (allValues.length === 0) return 0.1
+// AAL 데이터의 min-max 스케일링
+const aalScaleRange = computed(() => {
+  const allValues = [...currentSiteAals.value, ...candidateAals.value].filter((v) => v > 0)
 
+  if (allValues.length === 0) {
+    return { min: 0, max: 0.1 }
+  }
+
+  const min = Math.min(...allValues)
   const max = Math.max(...allValues)
-  // 최댓값이 0이거나 매우 작으면 기본값 사용
-  if (max <= 0) return 0.1
 
-  // 여유를 두기 위해 1.2배 적용
-  return max * 1.2
+  // 값이 모두 0이거나 매우 작으면 기본값
+  if (max <= 0) {
+    return { min: 0, max: 0.1 }
+  }
+
+  // min-max 범위 계산 (여유를 두기 위해 ±10% 적용)
+  const range = max - min
+  const padding = Math.max(range * 0.1, 0.01) // 최소 0.01의 여유
+
+  return {
+    min: Math.max(0, min - padding),
+    max: max + padding,
+  }
 })
 
 const aalRadarChartOptions = computed(() => ({
@@ -469,8 +496,9 @@ const aalRadarChartOptions = computed(() => ({
   },
   scales: {
     r: {
-      beginAtZero: true,
-      max: maxAalValue.value,
+      beginAtZero: false,
+      min: aalScaleRange.value.min,
+      max: aalScaleRange.value.max,
     },
   },
 }))
