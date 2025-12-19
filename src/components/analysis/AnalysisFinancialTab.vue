@@ -253,36 +253,40 @@ const chartData = computed(() => {
   }
 })
 
-// Y축 스케일 계산 (min-max 스케일링 - aal-scores 기준)
+// Y축 스케일 계산 (min-max 스케일링 - aal-scores의 max 값 기준)
 const calculateYScale = (): { min: number; max: number } => {
   const data = aalData.value
   if (!data) return { min: 0, max: 0.1 }
 
-  const allValues: number[] = []
-
-  // aal-scores 필드에서 값을 수집 (0보다 큰 값만)
+  // aal-scores 필드에서 max 값 찾기
   const aalScores = (data as any)['aal-scores']
   if (aalScores && typeof aalScores === 'object') {
-    Object.values(aalScores).forEach((value: any) => {
-      if (typeof value === 'number' && value > 0) {
-        allValues.push(value)
+    const values = Object.values(aalScores).filter(
+      (v): v is number => typeof v === 'number' && v > 0
+    )
+
+    if (values.length > 0) {
+      const maxValue = Math.max(...values)
+      // max 값에 20% 여유를 두고 범례 설정
+      return {
+        min: 0,
+        max: maxValue * 1.2,
       }
-    })
+    }
   }
 
-  // aal-scores가 없으면 기존 scenarios 데이터 사용 (fallback)
-  if (allValues.length === 0) {
-    const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
-    scenarios.forEach((scenario) => {
-      if (scenario) {
-        Object.values(scenario).forEach((value: any) => {
-          if (typeof value === 'number' && value > 0) {
-            allValues.push(value)
-          }
-        })
-      }
-    })
-  }
+  // aal-scores가 없으면 scenarios 데이터 사용 (fallback)
+  const allValues: number[] = []
+  const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
+  scenarios.forEach((scenario) => {
+    if (scenario) {
+      Object.values(scenario).forEach((value: any) => {
+        if (typeof value === 'number' && value > 0) {
+          allValues.push(value)
+        }
+      })
+    }
+  })
 
   if (allValues.length === 0) return { min: 0, max: 0.1 }
 
@@ -292,16 +296,15 @@ const calculateYScale = (): { min: number; max: number } => {
   // 모든 값이 같으면 범위를 설정
   if (minValue === maxValue) {
     const value = minValue
-    // 매우 작은 값인 경우
     if (value < 0.01) {
       return { min: 0, max: value * 2 }
     }
     return { min: value * 0.8, max: value * 1.2 }
   }
 
-  // min-max 스케일링: 범위의 20% 패딩 추가 (차이를 더 명확하게)
+  // min-max 스케일링: 범위의 20% 패딩 추가
   const range = maxValue - minValue
-  const padding = Math.max(range * 0.2, 0.01) // 최소 0.01의 여유
+  const padding = Math.max(range * 0.2, 0.01)
 
   return {
     min: Math.max(0, minValue - padding),

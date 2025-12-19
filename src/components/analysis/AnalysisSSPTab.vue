@@ -275,38 +275,42 @@ const chartData = computed(() => {
   }
 })
 
-// Y축 스케일 계산 (min-max 스케일링 - physical-risk-scores 기준)
+// Y축 스케일 계산 (min-max 스케일링 - physical-risk-scores의 max 값 기준)
 const calculateYScale = (): { min: number; max: number } => {
   const data = sspData.value
   if (!data) return { min: 0, max: 100 }
 
-  const allValues: number[] = []
-
-  // physical-risk-scores 필드에서 값을 수집 (0보다 큰 값만)
+  // physical-risk-scores 필드에서 max 값 찾기
   const physicalRiskScores = (data as any)['physical-risk-scores']
   if (physicalRiskScores && typeof physicalRiskScores === 'object') {
-    Object.values(physicalRiskScores).forEach((value: any) => {
-      if (typeof value === 'number' && value > 0) {
-        allValues.push(value)
+    const values = Object.values(physicalRiskScores).filter(
+      (v): v is number => typeof v === 'number' && v > 0
+    )
+
+    if (values.length > 0) {
+      const maxValue = Math.max(...values)
+      // max 값에 20% 여유를 두고 범례 설정
+      return {
+        min: 0,
+        max: Math.ceil(maxValue * 1.2),
       }
-    })
+    }
   }
 
-  // physical-risk-scores가 없으면 기존 scenarios 데이터 사용 (fallback)
-  if (allValues.length === 0) {
-    const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
-    scenarios.forEach((scenario) => {
-      if (scenario) {
-        Object.values(scenario).forEach((value: any) => {
-          if (typeof value === 'object' && value !== null && 'total' in value) {
-            allValues.push(value.total)
-          } else if (typeof value === 'number' && value > 0) {
-            allValues.push(value)
-          }
-        })
-      }
-    })
-  }
+  // physical-risk-scores가 없으면 scenarios 데이터 사용 (fallback)
+  const allValues: number[] = []
+  const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
+  scenarios.forEach((scenario) => {
+    if (scenario) {
+      Object.values(scenario).forEach((value: any) => {
+        if (typeof value === 'object' && value !== null && 'total' in value) {
+          allValues.push(value.total)
+        } else if (typeof value === 'number' && value > 0) {
+          allValues.push(value)
+        }
+      })
+    }
+  })
 
   if (allValues.length === 0) return { min: 0, max: 100 }
 
@@ -318,9 +322,9 @@ const calculateYScale = (): { min: number; max: number } => {
     return { min: Math.max(0, minValue - 10), max: minValue + 10 }
   }
 
-  // min-max 스케일링: 범위의 20% 패딩 추가 (차이를 더 명확하게)
+  // min-max 스케일링: 범위의 20% 패딩 추가
   const range = maxValue - minValue
-  const padding = Math.max(range * 0.2, 5) // 최소 5의 여유
+  const padding = Math.max(range * 0.2, 5)
 
   return {
     min: Math.max(0, Math.floor(minValue - padding)),

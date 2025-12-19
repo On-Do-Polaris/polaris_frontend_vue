@@ -427,37 +427,43 @@ watch(currentRegionScores, () => {
             <div class="text-xs text-gray-700 mb-2 font-medium">기후 위험도</div>
             <div class="space-y-0.5">
               <div class="flex items-center gap-2">
-                <div class="w-5 h-3" style="background-color: rgba(234, 0, 44, 0.7);"></div>
+                <div class="w-5 h-3" style="background-color: rgba(234, 0, 44, 0.7)"></div>
                 <span class="text-xs text-gray-800">
-                  매우 높음 ({{ Math.round(riskLevels.veryHigh.min) }}~{{ Math.round(riskLevels.veryHigh.max) }})
+                  매우 높음 ({{ Math.round(riskLevels.veryHigh.min) }}~{{
+                    Math.round(riskLevels.veryHigh.max)
+                  }})
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                <div class="w-5 h-3" style="background-color: rgba(247, 162, 95, 0.7);"></div>
+                <div class="w-5 h-3" style="background-color: rgba(247, 162, 95, 0.7)"></div>
                 <span class="text-xs text-gray-800">
                   높음 ({{ Math.round(riskLevels.high.min) }}~{{ Math.round(riskLevels.high.max) }})
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                <div class="w-5 h-3" style="background-color: rgba(253, 216, 53, 0.7);"></div>
+                <div class="w-5 h-3" style="background-color: rgba(253, 216, 53, 0.7)"></div>
                 <span class="text-xs text-gray-800">
-                  보통 ({{ Math.round(riskLevels.medium.min) }}~{{ Math.round(riskLevels.medium.max) }})
+                  보통 ({{ Math.round(riskLevels.medium.min) }}~{{
+                    Math.round(riskLevels.medium.max)
+                  }})
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                <div class="w-5 h-3" style="background-color: rgba(139, 195, 74, 0.7);"></div>
+                <div class="w-5 h-3" style="background-color: rgba(139, 195, 74, 0.7)"></div>
                 <span class="text-xs text-gray-800">
                   낮음 ({{ Math.round(riskLevels.low.min) }}~{{ Math.round(riskLevels.low.max) }})
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                <div class="w-5 h-3" style="background-color: rgba(0, 188, 212, 0.7);"></div>
+                <div class="w-5 h-3" style="background-color: rgba(0, 188, 212, 0.7)"></div>
                 <span class="text-xs text-gray-800">
-                  매우 낮음 ({{ Math.round(riskLevels.veryLow.min) }}~{{ Math.round(riskLevels.veryLow.max) }})
+                  매우 낮음 ({{ Math.round(riskLevels.veryLow.min) }}~{{
+                    Math.round(riskLevels.veryLow.max)
+                  }})
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                <div class="w-5 h-3" style="background-color: rgba(220, 220, 220, 0.4);"></div>
+                <div class="w-5 h-3" style="background-color: rgba(220, 220, 220, 0.4)"></div>
                 <span class="text-xs text-gray-800">데이터 없음</span>
               </div>
             </div>
@@ -505,9 +511,7 @@ watch(currentRegionScores, () => {
 
             <!-- 두 번째 행: 평균 기온 -->
             <div class="flex items-start justify-between gap-2">
-              <div class="text-xs text-gray-600 leading-tight">
-                사업장이 위치한 행정구역의 평균 기온
-              </div>
+              <div class="text-xs text-gray-600 leading-tight">기후 위험 지수</div>
               <div class="text-base text-gray-900 flex-shrink-0">{{ site.temperature }}</div>
             </div>
 
