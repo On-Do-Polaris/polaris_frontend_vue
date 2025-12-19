@@ -288,6 +288,17 @@
                         없음 (사용자가 직접 입력한 주소만 조회)
                       </td>
                     </tr>
+                    <tr>
+                      <td class="border border-[#E5E7EB] px-4 py-2 text-[#000000]">
+                        기상청_단기예보 ((구)_동네예보) 조회서비스
+
+                      </td>
+                      <td class="border border-[#E5E7EB] px-4 py-2 text-[#000000]">기상청</td>
+                      <td class="border border-[#E5E7EB] px-4 py-2 text-[#000000]">기후 정보 조회</td>
+                      <td class="border border-[#E5E7EB] px-4 py-2 text-[#000000]">
+                        기후 정보
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
