@@ -171,7 +171,7 @@ const siteAnalysis = computed(() => {
       name: siteData.siteName,
       aalIncrease: `${sign}${increasePercent}%`,
       status,
-      temperature: regionTemperature !== null ? `${regionTemperature.toFixed(1)}°C` : '-',
+      temperature: regionTemperature !== null ? `${regionTemperature.toFixed(1)}` : '-',
     }
   })
 })
