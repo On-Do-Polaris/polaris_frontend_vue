@@ -253,19 +253,19 @@ const chartData = computed(() => {
   }
 })
 
-// Y축 스케일 계산 (동적 min-max)
+// Y축 스케일 계산 (min-max 스케일링)
 const calculateYScale = (): { min: number; max: number } => {
   const data = aalData.value
   if (!data) return { min: 0, max: 0.1 }
 
   const allValues: number[] = []
 
-  // 모든 시나리오의 값을 수집
+  // 모든 시나리오의 값을 수집 (0보다 큰 값만)
   const scenarios = [data.scenarios1, data.scenarios2, data.scenarios3, data.scenarios4]
   scenarios.forEach((scenario) => {
     if (scenario) {
       Object.values(scenario).forEach((value: any) => {
-        if (typeof value === 'number') {
+        if (typeof value === 'number' && value > 0) {
           allValues.push(value)
         }
       })
@@ -284,12 +284,12 @@ const calculateYScale = (): { min: number; max: number } => {
     if (value < 0.01) {
       return { min: 0, max: value * 2 }
     }
-    return { min: Math.max(0, value - value * 0.2), max: value + value * 0.2 }
+    return { min: value * 0.8, max: value * 1.2 }
   }
 
-  // 여유를 두기 위해 범위의 10% 패딩 추가
+  // min-max 스케일링: 범위의 20% 패딩 추가 (차이를 더 명확하게)
   const range = maxValue - minValue
-  const padding = range * 0.1
+  const padding = Math.max(range * 0.2, 0.01) // 최소 0.01의 여유
 
   return {
     min: Math.max(0, minValue - padding),
@@ -317,6 +317,7 @@ const chartOptions = computed(() => {
           display: true,
           text: 'AAL (연간 평균 손실)',
         },
+        beginAtZero: false,
         min: yScale.min,
         max: yScale.max,
       },
